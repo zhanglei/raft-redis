@@ -10,6 +10,8 @@ import (
 	"io/ioutil"
 	"net"
 	"reflect"
+	"github.com/coreos/etcd/raft/raftpb"
+	"store"
 )
 
 type Server struct {
@@ -17,7 +19,7 @@ type Server struct {
 	Addr         string // TCP address to listen on, ":6389" if empty
 	MonitorChans []chan string
 	methods      map[string]HandlerFn
-
+	confChangeC chan<- raftpb.ConfChange
 }
 
 func (srv *Server) ListenAndServe() error {
@@ -64,11 +66,14 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 	}()
 
 	clientChan := make(chan struct{})
+	respchan := make (chan interface{})
 
 	// Read on `conn` in order to detect client disconnect
 	go func() {
 		// Close chan in order to trigger eventual selects
 		defer close(clientChan)
+		defer close(respchan)
+
 		defer Debugf("Client disconnected")
 		// FIXME: move conn within the request.
 		if false {
@@ -96,6 +101,7 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 		}
 		request.Host = clientAddr
 		request.ClientChan = clientChan
+		request.RespChan = respchan
 		reply, err := srv.Apply(request)
 		if err != nil {
 			return err
@@ -107,33 +113,31 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 	return nil
 }
 
-func NewServer(c *Config) (*Server, error) {
+func NewServer(c *store.Config) (*Server, error) {
 	srv := &Server{
-		Proto:        c.proto,
+		Proto:        c.Proto,
 		MonitorChans: []chan string{},
 		methods:      make(map[string]HandlerFn),
 	}
 
-
-
 	if srv.Proto == "unix" {
-		srv.Addr = c.host
+		srv.Addr = c.Host
 	} else {
-		srv.Addr = fmt.Sprintf("%s:%d", c.host, c.port)
+		srv.Addr = fmt.Sprintf("%s:%d", c.Host, c.Port)
 	}
 
-	if c.handler == nil {
-		c.handler = NewDefaultHandler(c)
+	if c.Handler == nil {
+		c.Handler = store.NewDefaultHandler(c,c.Kv)
 	}
 
-	rh := reflect.TypeOf(c.handler)
+	rh := reflect.TypeOf(c.Handler)
 	for i := 0; i < rh.NumMethod(); i++ {
 		method := rh.Method(i)
 		if method.Name[0] > 'a' && method.Name[0] < 'z' {
 			continue
 		}
 		println(method.Name)
-		handlerFn, err := srv.createHandlerFn(c.handler, &method.Func)
+		handlerFn, err := srv.createHandlerFn(c.Handler, &method.Func)
 		if err != nil {
 			return nil, err
 		}
@@ -141,3 +145,5 @@ func NewServer(c *Config) (*Server, error) {
 	}
 	return srv, nil
 }
+
+

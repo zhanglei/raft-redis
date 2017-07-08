@@ -10,6 +10,7 @@ type Request struct {
 	Args       [][]byte
 	Host       string
 	ClientChan chan struct{}
+	RespChan chan interface{}
 	Body       io.ReadCloser
 }
 
