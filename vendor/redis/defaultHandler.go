@@ -3,7 +3,7 @@ package redis
 import (
 	"sync"
 	"store"
-	"fmt"
+	"errors"
 )
 
 type DefaultHandler struct {
@@ -28,7 +28,7 @@ func (h *DefaultHandler) Rpush(key string, value []byte, values ...[]byte) (int,
 	h.rwmu.Lock()
 	defer h.rwmu.Unlock()
 
-	h.kv.Propose("rpush",append([][]byte{[]byte(key)},values...))
+	//h.kv.Propose("rpush",append([][]byte{[]byte(key)},values...))
 
 	if _, exists := h.Brstack[key]; !exists {
 		h.Brstack[key] = store.NewStack(key)
@@ -94,7 +94,7 @@ func (h *DefaultHandler) Lpush(key string, value []byte, values ...[]byte) (int,
 	if h.Database == nil {
 		h.Database = store.NewDatabase()
 	}
-	h.kv.Propose("rpush",append([][]byte{[]byte(key)},values...))
+	//h.kv.Propose("rpush",append([][]byte{[]byte(key)},values...))
 	if _, exists := h.Brstack[key]; !exists {
 		h.Brstack[key] = store.NewStack(key)
 	}
@@ -116,7 +116,7 @@ func (h *DefaultHandler)Lpop(key string) ([]byte,error) {
 	if _,found := h.Brstack[key];!found{
 		return nil,nil
 	}
-	h.kv.Propose("lpop",append([][]byte{[]byte(key)}))
+	//h.kv.Propose("lpop",append([][]byte{[]byte(key)}))
 	return h.Brstack[key].PopFront(),nil
 }
 
@@ -130,7 +130,7 @@ func (h *DefaultHandler)Rpop(key string) ([]byte,error) {
 	if _,found := h.Brstack[key];!found{
 		return nil,nil
 	}
-	h.kv.Propose("rpop",append([][]byte{[]byte(key)}))
+	//h.kv.Propose("rpop",append([][]byte{[]byte(key)}))
 	return h.Brstack[key].PopBack(),nil
 }
 
@@ -152,7 +152,7 @@ func (h *DefaultHandler) Sadd (key string, values ...string) (int ,error){
 	for _,value :=range values {
 		bytes = append(bytes, []byte(value))
 	}
-	h.kv.Propose("sadd",append([][]byte{[]byte(key)},bytes...))
+	//h.kv.Propose("sadd",append([][]byte{[]byte(key)},bytes...))
 	for _,value :=range values {
 		count =count + h.Hvset[key].Add(value)
 	}
@@ -208,7 +208,7 @@ func (h *DefaultHandler) Hset(key, subkey string, value []byte) (int, error) {
 	defer h.rwmu.Unlock()
 
 
-	h.kv.Propose("hset",append([][]byte{[]byte(key)},[]byte(subkey),value))
+	//h.kv.Propose("hset",append([][]byte{[]byte(key)},[]byte(subkey),value))
 	if h.Database == nil {
 		h.Database = store.NewDatabase()
 	}
@@ -247,12 +247,7 @@ func (h *DefaultHandler) Get(key string) ([]byte, error) {
 func (h *DefaultHandler) Set(key string, value []byte) error {
 	h.rwmu.Lock()
 	defer h.rwmu.Unlock()
-	h.kv.Propose("set",append([][]byte{[]byte(key)},value))
-	/*if h.Database == nil {
-		h.Database = store.NewDatabase()
-	}
-
-	h.Values[key] = value*/
+	h.kv.Propose("set",append([][]byte{[]byte(key)},value),"")
 	return nil
 }
 
@@ -268,32 +263,13 @@ func (h *DefaultHandler) Del(r *Request,key string, keys ...string) (int, error)
 	for _, k := range keys {
 		bytes = append(bytes,[]byte(k))
 	}
-
-	fmt.Println(r)
-	h.kv.Propose("del",bytes)
-	//return count.(int), nil
-	return 0, nil
+	h.kv.Propose("del",bytes,r.Conn)
+	num,ok := <- (*r.Conns)[r.Conn]
+	if !ok {
+		return 0,errors.New("del op something errors")
+	}
+	return num.(int), nil
 }
-
-
-
-/*func (h *DefaultHandler) Select(key string) error {
-	if h.dbs == nil {
-		h.dbs = map[int]*Database{0: h.Database}
-	}
-	index, err := strconv.Atoi(key)
-	if err != nil {
-		return err
-	}
-	h.dbs[h.currentDb] = h.Database
-	h.currentDb = index
-	if _, exists := h.dbs[index]; !exists {
-		println("DB not exits, create ", index)
-		h.dbs[index] = store.NewDatabase()
-	}
-	h.Database = h.dbs[index]
-	return nil
-}*/
 
 func NewDefaultHandler( c *store.Config,kv *store.KvStore) *DefaultHandler {
 	ret := &DefaultHandler{

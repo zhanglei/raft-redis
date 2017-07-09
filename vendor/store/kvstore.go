@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/coreos/etcd/snap"
-	"fmt"
 )
 
 // a key-value store backed by raftd
@@ -30,15 +29,17 @@ type KvStore struct {
 	mu          sync.RWMutex
 	Redis       *Database
 	snapshotter *snap.Snapshotter
+	Conns *map[string]chan interface{}
 }
 
 type kv struct {
 	Method string
 	Args [][]byte
+	Conn string
 }
 
-func NewKVStore(snapshotter *snap.Snapshotter, proposeC chan<- string, commitC <-chan *string, errorC <-chan error) *KvStore {
-	s := &KvStore{proposeC: proposeC, Redis: NewDatabase(), snapshotter: snapshotter}
+func NewKVStore(snapshotter *snap.Snapshotter, proposeC chan<- string, commitC <-chan *string, errorC <-chan error,Conns  *map[string]chan interface{}) *KvStore {
+	s := &KvStore{proposeC: proposeC, Redis: NewDatabase(), snapshotter: snapshotter,Conns:Conns}
 	// replay log into key-value map
 	s.readCommits(commitC, errorC)
 	// read commits from raftd into kvStore map until error
@@ -48,9 +49,9 @@ func NewKVStore(snapshotter *snap.Snapshotter, proposeC chan<- string, commitC <
 
 
 
-func (s *KvStore) Propose(m string, a [][]byte) {
+func (s *KvStore) Propose(m string, a [][]byte,conn string) {
 	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(kv{m,a}); err != nil {
+	if err := gob.NewEncoder(&buf).Encode(kv{m,a,conn}); err != nil {
 		log.Fatal(err)
 	}
 
@@ -84,13 +85,14 @@ func (s *KvStore) readCommits(commitC <-chan *string, errorC <-chan error) {
 		log.Printf("do commit %s %s",dataKv.Method,dataKv.Args)
 		s.mu.Lock()
 
-
-		fmt.Println(dataKv)
 		switch dataKv.Method {
 		case "set" :
 			s.Redis.methodSet(dataKv.Args)
 		case "del" :
-			s.Redis.methodDel(dataKv.Args)
+			num := s.Redis.methodDel(dataKv.Args)
+			if respchan,found :=(*s.Conns)[dataKv.Conn];found {
+				respchan <- num
+			}
 		default:
 			//do nothing*/
 		}

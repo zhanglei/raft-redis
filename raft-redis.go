@@ -20,17 +20,14 @@ func main() {
 	defer close(proposeC)
 	confChangeC := make(chan raftpb.ConfChange)
 	defer close(confChangeC)
-
+	Conns := make( map[string]chan interface{})
 	// raft provides a commit stream for the proposals from the http api
 	var kvs *store.KvStore
 	getSnapshot := func() ([]byte, error) { return kvs.GetSnapshot() }
 	commitC, errorC, snapshotterReady := raftd.NewRaftNode(*id, strings.Split(*cluster, ","), *join, getSnapshot, proposeC, confChangeC)
 
-	kvs = store.NewKVStore(<-snapshotterReady, proposeC, commitC, errorC)
-
-
-
-	server, err := redis.NewServer(store.DefaultConfig(confChangeC,kvs,*kvport))
+	kvs = store.NewKVStore(<-snapshotterReady, proposeC, commitC, errorC,&Conns)
+	server, err := redis.NewServer(store.DefaultConfig(confChangeC,kvs,*kvport),&Conns)
 	if err != nil {
 		panic(err)
 	}

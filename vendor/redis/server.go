@@ -20,8 +20,7 @@ type Server struct {
 	MonitorChans []chan string
 	methods      map[string]HandlerFn
 	confChangeC chan<- raftpb.ConfChange
-
-	Conns map[*store.Conn]chan interface{}
+	Conns *map[string]chan interface{}
 }
 
 func (srv *Server) ListenAndServe() error {
@@ -60,16 +59,8 @@ func (srv *Server) Serve(l net.Listener) error {
 // It reads commands using the redis protocol, passes them to `handler`,
 // and returns the result.
 func (srv *Server) ServeClient(conn net.Conn) (err error) {
-	defer func() {
-		if err != nil {
-			fmt.Fprintf(conn, "-%s\n", err)
-		}
-		conn.Close()
-	}()
-
 	clientChan := make(chan struct{})
 	var clientAddr string
-
 	switch co := conn.(type) {
 	case *net.UnixConn:
 		f, err := conn.(*net.UnixConn).File()
@@ -80,17 +71,23 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 	default:
 		clientAddr = co.RemoteAddr().String()
 	}
-	c := &store.Conn{conn,clientAddr}
+	c := clientAddr
 
-	srv.Conns[c] = make(chan interface{})
+	(*srv.Conns)[c] = make(chan interface{})
+	defer func() {
+		if err != nil {
+			fmt.Fprintf(conn, "-%s\n", err)
+		}
+		close((*srv.Conns)[c])
+		delete(*srv.Conns,c)
+		conn.Close()
+	}()
 	// Read on `conn` in order to detect client disconnect
 	go func() {
 		// Close chan in order to trigger eventual selects
 
 		defer func() {
 			 close(clientChan)
-			 close(srv.Conns[c])
-			 delete(srv.Conns,c)
 			 Debugf("Client disconnected")
 		}()
 
@@ -108,6 +105,7 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 		request.Host = clientAddr
 		request.ClientChan = clientChan
 		request.Conn = c
+		request.Conns = srv.Conns
 		reply, err := srv.Apply(request)
 		if err != nil {
 			return err
@@ -119,12 +117,12 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 	return nil
 }
 
-func NewServer(c *store.Config) (*Server, error) {
+func NewServer(c *store.Config,conns *map[string]chan interface{}) (*Server, error) {
 	srv := &Server{
 		Proto:        c.Proto,
 		MonitorChans: []chan string{},
 		methods:      make(map[string]HandlerFn),
-		Conns:make(map[*store.Conn]chan interface{}),
+		Conns:conns,
 	}
 
 	if srv.Proto == "unix" {

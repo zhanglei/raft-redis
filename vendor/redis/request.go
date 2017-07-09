@@ -3,7 +3,6 @@ package redis
 import (
 	"io"
 	"strconv"
-	"store"
 )
 
 type Request struct {
@@ -12,7 +11,8 @@ type Request struct {
 	Host       string
 	ClientChan chan struct{}
 	Body       io.ReadCloser
-	Conn       *store.Conn
+	Conn       string
+	Conns      *map[string]chan interface{}
 }
 
 func (r *Request) HasArgument(index int) bool {

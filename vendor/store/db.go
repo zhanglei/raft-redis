@@ -1,7 +1,5 @@
 package store
 
-import "fmt"
-
 type (
 	HashValue   map[string][]byte
 	HashHash    map[string]HashValue
@@ -35,7 +33,7 @@ func (d *Database)methodSet(b [][]byte)  {
 }
 
 
-func (d *Database)methodDel(b [][]byte)  {
+func (d *Database)methodDel(b [][]byte) int {
 	if d == nil {
 		d = NewDatabase()
 	}
@@ -43,7 +41,6 @@ func (d *Database)methodDel(b [][]byte)  {
 	count := 0
 	for _, k := range b {
 		key := string(k)
-		fmt.Println(key)
 		if _, exists := d.Values[key]; exists {
 			delete(d.Values, key)
 			count++
@@ -52,13 +49,10 @@ func (d *Database)methodDel(b [][]byte)  {
 			delete(d.Values, key)
 			count++
 		}
-
 		if _, exists := d.Hvset[key]; exists {
 			delete(d.Hvset, key)
 			count++
 		}
 	}
-
-
-
+	return count
 }
