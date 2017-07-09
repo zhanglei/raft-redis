@@ -54,7 +54,6 @@ func (s *KvStore) Propose(m string, a [][]byte) {
 		log.Fatal(err)
 	}
 
-	println(buf.String())
 	s.proposeC <- string(buf.Bytes())
 }
 

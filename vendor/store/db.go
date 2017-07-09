@@ -10,17 +10,17 @@ type (
 )
 
 type Database struct {
-	values  HashValue
-	hvalues HashHash
-	brstack HashBrStack
-	set HashSet
+	Values  HashValue
+	Hvalues HashHash
+	Brstack HashBrStack
+	Hvset HashSet
 }
 
 func NewDatabase() *Database {
 	db := &Database{
-		values:   make(HashValue),
-		brstack:  make(HashBrStack),
-		set    :  make(HashSet),
+		Values:   make(HashValue),
+		Brstack:  make(HashBrStack),
+		Hvset    :  make(HashSet),
 	}
 	//db.children[0] = db
 	return db
@@ -31,7 +31,7 @@ func (d *Database)methodSet(b [][]byte)  {
 		d = NewDatabase()
 	}
 
-	d.values[string(b[0])] = b[1]
+	d.Values[string(b[0])] = b[1]
 }
 
 
@@ -40,22 +40,21 @@ func (d *Database)methodDel(b [][]byte)  {
 		d = NewDatabase()
 	}
 
-
 	count := 0
 	for _, k := range b {
 		key := string(k)
 		fmt.Println(key)
-		if _, exists := d.values[key]; exists {
-			delete(d.values, key)
+		if _, exists := d.Values[key]; exists {
+			delete(d.Values, key)
 			count++
 		}
-		if _, exists := d.hvalues[key]; exists {
-			delete(d.hvalues, key)
+		if _, exists := d.Values[key]; exists {
+			delete(d.Values, key)
 			count++
 		}
 
-		if _, exists := d.set[key]; exists {
-			delete(d.set, key)
+		if _, exists := d.Hvset[key]; exists {
+			delete(d.Hvset, key)
 			count++
 		}
 	}

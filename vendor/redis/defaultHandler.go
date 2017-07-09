@@ -1,15 +1,15 @@
-package store
+package redis
 
 import (
 	"sync"
+	"store"
 )
 
-
 type DefaultHandler struct {
-	*Database
+	* store.Database
 	currentDb int
-	kv *KvStore
-	c *Config
+	kv *store.KvStore
+	c *store.Config
 	rwmu sync.RWMutex
 }
 type Op struct {
@@ -22,51 +22,51 @@ func (h *DefaultHandler) Rpush(key string, value []byte, values ...[]byte) (int,
 
 	values = append([][]byte{value}, values...)
 	if h.Database == nil {
-		h.Database = NewDatabase()
+		h.Database = store.NewDatabase()
 	}
 	h.rwmu.Lock()
 	defer h.rwmu.Unlock()
 
 	h.kv.Propose("rpush",append([][]byte{[]byte(key)},values...))
 
-	if _, exists := h.brstack[key]; !exists {
-		h.brstack[key] = NewStack(key)
+	if _, exists := h.Brstack[key]; !exists {
+		h.Brstack[key] = store.NewStack(key)
 	}
 	for _, value := range values {
-		h.brstack[key].PushBack(value)
+		h.Brstack[key].PushBack(value)
 	}
-	return h.brstack[key].Len(), nil
+	return h.Brstack[key].Len(), nil
 }
 
 
 func (h *DefaultHandler) Lrange(key string, start, stop int) ([][]byte, error) {
 	if h.Database == nil {
-		h.Database = NewDatabase()
+		h.Database = store.NewDatabase()
 	}
 
 	h.rwmu.RLock()
 	defer h.rwmu.RUnlock()
 
-	if _, exists := h.brstack[key]; !exists {
-		h.brstack[key] = NewStack(key)
+	if _, exists := h.Brstack[key]; !exists {
+		h.Brstack[key] = store.NewStack(key)
 	}
 
 	if start < 0 {
-		if start = h.brstack[key].Len() + start; start < 0 {
+		if start = h.Brstack[key].Len() + start; start < 0 {
 			start = 0
 		}
 	}
 
 	var ret [][]byte
 	if stop < 0 {
-		stop =  h.brstack[key].Len() + stop
+		stop =  h.Brstack[key].Len() + stop
 		if stop <0 {
 			return nil,nil
 		}
 	}
 
 	for i := start; i <= stop; i++ {
-		if val := h.brstack[key].GetIndex(i); val != nil {
+		if val := h.Brstack[key].GetIndex(i); val != nil {
 			ret = append(ret, val)
 		}
 	}
@@ -75,14 +75,14 @@ func (h *DefaultHandler) Lrange(key string, start, stop int) ([][]byte, error) {
 
 func (h *DefaultHandler) Lindex(key string, index int) ([]byte, error) {
 	if h.Database == nil {
-		h.Database = NewDatabase()
+		h.Database = store.NewDatabase()
 	}
 	h.rwmu.RLock()
 	defer h.rwmu.RUnlock()
-	if _, exists := h.brstack[key]; !exists {
-		h.brstack[key] = NewStack(key)
+	if _, exists := h.Brstack[key]; !exists {
+		h.Brstack[key] = store.NewStack(key)
 	}
-	return h.brstack[key].GetIndex(index), nil
+	return h.Brstack[key].GetIndex(index), nil
 }
 
 func (h *DefaultHandler) Lpush(key string, value []byte, values ...[]byte) (int, error) {
@@ -91,46 +91,46 @@ func (h *DefaultHandler) Lpush(key string, value []byte, values ...[]byte) (int,
 	h.rwmu.Lock()
 	defer h.rwmu.Unlock()
 	if h.Database == nil {
-		h.Database = NewDatabase()
+		h.Database = store.NewDatabase()
 	}
 	h.kv.Propose("rpush",append([][]byte{[]byte(key)},values...))
-	if _, exists := h.brstack[key]; !exists {
-		h.brstack[key] = NewStack(key)
+	if _, exists := h.Brstack[key]; !exists {
+		h.Brstack[key] = store.NewStack(key)
 	}
 	for _, value := range values {
-		h.brstack[key].PushFront(value)
+		h.Brstack[key].PushFront(value)
 	}
-	return h.brstack[key].Len(), nil
+	return h.Brstack[key].Len(), nil
 }
 
 
 func (h *DefaultHandler)Lpop(key string) ([]byte,error) {
 
-	if h.Database == nil || h.brstack == nil{
+	if h.Database == nil || h.Brstack == nil{
 		return nil, nil
 	}
 	h.rwmu.Lock()
 	defer h.rwmu.Unlock()
 
-	if _,found := h.brstack[key];!found{
+	if _,found := h.Brstack[key];!found{
 		return nil,nil
 	}
 	h.kv.Propose("lpop",append([][]byte{[]byte(key)}))
-	return h.brstack[key].PopFront(),nil
+	return h.Brstack[key].PopFront(),nil
 }
 
 func (h *DefaultHandler)Rpop(key string) ([]byte,error) {
 
-	if h.Database == nil || h.brstack == nil{
+	if h.Database == nil || h.Brstack == nil{
 		return nil, nil
 	}
 	h.rwmu.Lock()
 	defer h.rwmu.Unlock()
-	if _,found := h.brstack[key];!found{
+	if _,found := h.Brstack[key];!found{
 		return nil,nil
 	}
 	h.kv.Propose("rpop",append([][]byte{[]byte(key)}))
-	return h.brstack[key].PopBack(),nil
+	return h.Brstack[key].PopBack(),nil
 }
 
 //set operation
@@ -138,11 +138,11 @@ func (h *DefaultHandler) Sadd (key string, values ...string) (int ,error){
 	h.rwmu.Lock()
 	defer h.rwmu.Unlock()
 	if h.Database == nil {
-		h.Database = NewDatabase()
+		h.Database = store.NewDatabase()
 	}
 
-	if _, exists := h.set[key]; !exists {
-		h.set[key] = NewSet(key)
+	if _, exists := h.Hvset[key]; !exists {
+		h.Hvset[key] = store.NewSet(key)
 	}
 
 	count := 0
@@ -153,7 +153,7 @@ func (h *DefaultHandler) Sadd (key string, values ...string) (int ,error){
 	}
 	h.kv.Propose("sadd",append([][]byte{[]byte(key)},bytes...))
 	for _,value :=range values {
-		count =count + h.set[key].Add(value)
+		count =count + h.Hvset[key].Add(value)
 	}
 	return count,nil
 }
@@ -163,12 +163,12 @@ func (h *DefaultHandler) Scard (key string)( int,error) {
 	h.rwmu.RLock()
 	defer h.rwmu.RUnlock()
 	if h.Database == nil {
-		h.Database = NewDatabase()
+		h.Database = store.NewDatabase()
 	}
-	if _, exists := h.set[key]; !exists {
+	if _, exists := h.Hvset[key]; !exists {
 		return 0,nil
 	}
-	return h.set[key].Len(),nil
+	return h.Hvset[key].Len(),nil
 }
 
 
@@ -176,24 +176,24 @@ func (h *DefaultHandler) Smembers (key string)  ([][]byte,error) {
 	h.rwmu.RLock()
 	defer h.rwmu.RUnlock()
 	if h.Database == nil {
-		h.Database = NewDatabase()
+		h.Database = store.NewDatabase()
 	}
-	if _, exists := h.set[key]; !exists {
+	if _, exists := h.Hvset[key]; !exists {
 		return nil,nil
 	}
 
-	return *h.set[key].Members(),nil
+	return *h.Hvset[key].Members(),nil
 }
 
 //hash set
 func (h *DefaultHandler) Hget(key, subkey string) ([]byte, error) {
-	if h.Database == nil || h.hvalues == nil {
+	if h.Database == nil || h.Hvalues == nil {
 		return nil, nil
 	}
 	h.rwmu.RLock()
 	defer h.rwmu.RUnlock()
 
-	if v, exists := h.hvalues[key]; exists {
+	if v, exists := h.Hvalues[key]; exists {
 		if v, exists := v[subkey]; exists {
 			return v, nil
 		}
@@ -209,38 +209,38 @@ func (h *DefaultHandler) Hset(key, subkey string, value []byte) (int, error) {
 
 	h.kv.Propose("hset",append([][]byte{[]byte(key)},[]byte(subkey),value))
 	if h.Database == nil {
-		h.Database = NewDatabase()
+		h.Database = store.NewDatabase()
 	}
-	if _, exists := h.hvalues[key]; !exists {
-		h.hvalues[key] = make(HashValue)
+	if _, exists := h.Hvalues[key]; !exists {
+		h.Hvalues[key] = make(store.HashValue)
 		ret = 1
 	}
 
-	if _, exists := h.hvalues[key][subkey]; !exists {
+	if _, exists := h.Hvalues[key][subkey]; !exists {
 		ret = 1
 	}
 
-	h.hvalues[key][subkey] = value
+	h.Hvalues[key][subkey] = value
 
 	return ret, nil
 }
 
-func (h *DefaultHandler) Hgetall(key string) (HashValue, error) {
-	if h.Database == nil || h.hvalues == nil {
+func (h *DefaultHandler) Hgetall(key string) (store.HashValue, error) {
+	if h.Database == nil || h.Hvalues == nil {
 		return nil, nil
 	}
 	h.rwmu.RLock()
 	defer h.rwmu.RUnlock()
-	return h.hvalues[key], nil
+	return h.Hvalues[key], nil
 }
 
 func (h *DefaultHandler) Get(key string) ([]byte, error) {
-	if h.Database == nil || h.values == nil {
+	if h.Database == nil || h.Values == nil {
 		return nil, nil
 	}
 	h.rwmu.RLock()
 	defer h.rwmu.RUnlock()
-	return h.values[key], nil
+	return h.Values[key], nil
 }
 
 func (h *DefaultHandler) Set(key string, value []byte) error {
@@ -248,10 +248,10 @@ func (h *DefaultHandler) Set(key string, value []byte) error {
 	defer h.rwmu.Unlock()
 	h.kv.Propose("set",append([][]byte{[]byte(key)},value))
 	/*if h.Database == nil {
-		h.Database = NewDatabase()
+		h.Database = store.NewDatabase()
 	}
 
-	h.values[key] = value*/
+	h.Values[key] = value*/
 	return nil
 }
 
@@ -287,13 +287,13 @@ func (h *DefaultHandler) Del(key string, keys ...string) (int, error) {
 	h.currentDb = index
 	if _, exists := h.dbs[index]; !exists {
 		println("DB not exits, create ", index)
-		h.dbs[index] = NewDatabase()
+		h.dbs[index] = store.NewDatabase()
 	}
 	h.Database = h.dbs[index]
 	return nil
 }*/
 
-func NewDefaultHandler( c *Config,kv *KvStore) *DefaultHandler {
+func NewDefaultHandler( c *store.Config,kv *store.KvStore) *DefaultHandler {
 	ret := &DefaultHandler{
 		kv:kv,
 		Database:  kv.Redis,

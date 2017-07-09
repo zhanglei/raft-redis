@@ -127,7 +127,7 @@ func NewServer(c *store.Config) (*Server, error) {
 	}
 
 	if c.Handler == nil {
-		c.Handler = store.NewDefaultHandler(c,c.Kv)
+		c.Handler = NewDefaultHandler(c,c.Kv)
 	}
 
 	rh := reflect.TypeOf(c.Handler)
@@ -136,7 +136,7 @@ func NewServer(c *store.Config) (*Server, error) {
 		if method.Name[0] > 'a' && method.Name[0] < 'z' {
 			continue
 		}
-		println(method.Name)
+		//println(method.Name)
 		handlerFn, err := srv.createHandlerFn(c.Handler, &method.Func)
 		if err != nil {
 			return nil, err
