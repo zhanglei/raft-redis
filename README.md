@@ -4,8 +4,9 @@ simple redis server with raft
 
 
 # useage
-    go get
-
+    go get github.com/widaT/raft-redis
+    go build github.com/widaT/raft-redis
+    goreman  start
 
 # Thanks
 
