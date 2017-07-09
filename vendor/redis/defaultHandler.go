@@ -19,24 +19,17 @@ type Op struct {
 }
 
 //list operation
-func (h *DefaultHandler) Rpush(key string, value []byte, values ...[]byte) (int, error) {
-
+func (h *DefaultHandler) Rpush(r *Request,key string, value []byte, values ...[]byte) (int, error) {
 	values = append([][]byte{value}, values...)
 	if h.Database == nil {
 		h.Database = store.NewDatabase()
 	}
-	h.rwmu.Lock()
-	defer h.rwmu.Unlock()
-
-	//h.kv.Propose("rpush",append([][]byte{[]byte(key)},values...))
-
-	if _, exists := h.Brstack[key]; !exists {
-		h.Brstack[key] = store.NewStack(key)
+	h.kv.Propose("rpush",append([][]byte{[]byte(key)},values...),r.Conn)
+	ret,ok := <- (*r.Conns)[r.Conn]
+	if !ok {
+		return 0,errors.New("rpush op something errors")
 	}
-	for _, value := range values {
-		h.Brstack[key].PushBack(value)
-	}
-	return h.Brstack[key].Len(), nil
+	return ret.(int), nil
 }
 
 
@@ -86,7 +79,7 @@ func (h *DefaultHandler) Lindex(key string, index int) ([]byte, error) {
 	return h.Brstack[key].GetIndex(index), nil
 }
 
-func (h *DefaultHandler) Lpush(key string, value []byte, values ...[]byte) (int, error) {
+func (h *DefaultHandler) Lpush(r *Request,key string, value []byte, values ...[]byte) (int, error) {
 	values = append([][]byte{value}, values...)
 
 	h.rwmu.Lock()
@@ -94,18 +87,17 @@ func (h *DefaultHandler) Lpush(key string, value []byte, values ...[]byte) (int,
 	if h.Database == nil {
 		h.Database = store.NewDatabase()
 	}
-	//h.kv.Propose("rpush",append([][]byte{[]byte(key)},values...))
-	if _, exists := h.Brstack[key]; !exists {
-		h.Brstack[key] = store.NewStack(key)
+	h.kv.Propose("rpush",append([][]byte{[]byte(key)},values...),r.Conn)
+
+	ret,ok := <- (*r.Conns)[r.Conn]
+	if !ok {
+		return 0,errors.New("rpush op something errors")
 	}
-	for _, value := range values {
-		h.Brstack[key].PushFront(value)
-	}
-	return h.Brstack[key].Len(), nil
+	return ret.(int), nil
 }
 
 
-func (h *DefaultHandler)Lpop(key string) ([]byte,error) {
+func (h *DefaultHandler)Lpop(r *Request,key string) ([]byte,error) {
 
 	if h.Database == nil || h.Brstack == nil{
 		return nil, nil
@@ -116,11 +108,17 @@ func (h *DefaultHandler)Lpop(key string) ([]byte,error) {
 	if _,found := h.Brstack[key];!found{
 		return nil,nil
 	}
-	//h.kv.Propose("lpop",append([][]byte{[]byte(key)}))
-	return h.Brstack[key].PopFront(),nil
+	h.kv.Propose("lpop",append([][]byte{[]byte(key)}),r.Conn)
+	ret,ok := <- (*r.Conns)[r.Conn]
+	if !ok {
+		return []byte{},errors.New("lpop op something errors")
+	}
+	return ret.([]byte),nil
+
+	//return h.Brstack[key].PopFront(),nil
 }
 
-func (h *DefaultHandler)Rpop(key string) ([]byte,error) {
+func (h *DefaultHandler)Rpop(r *Request,key string) ([]byte,error) {
 
 	if h.Database == nil || h.Brstack == nil{
 		return nil, nil
@@ -130,33 +128,34 @@ func (h *DefaultHandler)Rpop(key string) ([]byte,error) {
 	if _,found := h.Brstack[key];!found{
 		return nil,nil
 	}
-	//h.kv.Propose("rpop",append([][]byte{[]byte(key)}))
-	return h.Brstack[key].PopBack(),nil
+	h.kv.Propose("rpop",append([][]byte{[]byte(key)}),r.Conn)
+
+	ret,ok := <- (*r.Conns)[r.Conn]
+	if !ok {
+		return []byte{},errors.New("rpop op something errors")
+	}
+
+	return ret.([]byte),nil
 }
 
 //set operation
-func (h *DefaultHandler) Sadd (key string, values ...string) (int ,error){
+func (h *DefaultHandler) Sadd (r *Request,key string, values ...string) (int ,error){
 	h.rwmu.Lock()
 	defer h.rwmu.Unlock()
 	if h.Database == nil {
 		h.Database = store.NewDatabase()
 	}
 
-	if _, exists := h.Hvset[key]; !exists {
-		h.Hvset[key] = store.NewSet(key)
-	}
-
-	count := 0
-
 	var bytes [][]byte
 	for _,value :=range values {
 		bytes = append(bytes, []byte(value))
 	}
-	//h.kv.Propose("sadd",append([][]byte{[]byte(key)},bytes...))
-	for _,value :=range values {
-		count =count + h.Hvset[key].Add(value)
+	h.kv.Propose("sadd",append([][]byte{[]byte(key)},bytes...),r.Conn)
+	num,ok := <- (*r.Conns)[r.Conn]
+	if !ok {
+		return 0,errors.New("sadd op something errors")
 	}
-	return count,nil
+	return num.(int),nil
 }
 
 
@@ -202,28 +201,14 @@ func (h *DefaultHandler) Hget(key, subkey string) ([]byte, error) {
 	return nil, nil
 }
 
-func (h *DefaultHandler) Hset(key, subkey string, value []byte) (int, error) {
-	ret := 0
-	h.rwmu.Lock()
-	defer h.rwmu.Unlock()
+func (h *DefaultHandler) Hset(r *Request,key, subkey string, value []byte) (int, error) {
 
-
-	//h.kv.Propose("hset",append([][]byte{[]byte(key)},[]byte(subkey),value))
-	if h.Database == nil {
-		h.Database = store.NewDatabase()
+	h.kv.Propose("hset",append([][]byte{[]byte(key)},[]byte(subkey),value),r.Conn)
+	num,ok := <- (*r.Conns)[r.Conn]
+	if !ok {
+		return 0,errors.New("del op something errors")
 	}
-	if _, exists := h.Hvalues[key]; !exists {
-		h.Hvalues[key] = make(store.HashValue)
-		ret = 1
-	}
-
-	if _, exists := h.Hvalues[key][subkey]; !exists {
-		ret = 1
-	}
-
-	h.Hvalues[key][subkey] = value
-
-	return ret, nil
+	return num.(int), nil
 }
 
 func (h *DefaultHandler) Hgetall(key string) (store.HashValue, error) {
@@ -252,7 +237,6 @@ func (h *DefaultHandler) Set(key string, value []byte) error {
 }
 
 func (h *DefaultHandler) Del(r *Request,key string, keys ...string) (int, error) {
-
 	keys = append([]string{key}, keys...)
 	if h.Database == nil {
 		return 0, nil

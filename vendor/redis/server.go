@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"github.com/coreos/etcd/raft/raftpb"
 	"store"
+	"time"
 )
 
 type Server struct {
@@ -71,7 +72,7 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 	default:
 		clientAddr = co.RemoteAddr().String()
 	}
-	c := clientAddr
+	c := fmt.Sprintf("%s%d",clientAddr,time.Now().UnixNano())
 
 	(*srv.Conns)[c] = make(chan interface{})
 	defer func() {
@@ -125,11 +126,7 @@ func NewServer(c *store.Config,conns *map[string]chan interface{}) (*Server, err
 		Conns:conns,
 	}
 
-	if srv.Proto == "unix" {
-		srv.Addr = c.Host
-	} else {
-		srv.Addr = fmt.Sprintf("%s:%d", c.Host, c.Port)
-	}
+	srv.Addr = fmt.Sprintf("%s:%d", c.Host, c.Port)
 
 	if c.Handler == nil {
 		c.Handler = NewDefaultHandler(c,c.Kv)
@@ -141,7 +138,6 @@ func NewServer(c *store.Config,conns *map[string]chan interface{}) (*Server, err
 		if method.Name[0] > 'a' && method.Name[0] < 'z' {
 			continue
 		}
-		//println(method.Name)
 		handlerFn, err := srv.createHandlerFn(c.Handler, &method.Func)
 		if err != nil {
 			return nil, err
