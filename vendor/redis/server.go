@@ -20,6 +20,8 @@ type Server struct {
 	MonitorChans []chan string
 	methods      map[string]HandlerFn
 	confChangeC chan<- raftpb.ConfChange
+
+	Conns map[*store.Conn]chan interface{}
 }
 
 func (srv *Server) ListenAndServe() error {
@@ -66,21 +68,6 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 	}()
 
 	clientChan := make(chan struct{})
-	respchan := make (chan interface{})
-
-	// Read on `conn` in order to detect client disconnect
-	go func() {
-		// Close chan in order to trigger eventual selects
-		defer close(clientChan)
-		defer close(respchan)
-
-		defer Debugf("Client disconnected")
-		// FIXME: move conn within the request.
-		if false {
-			io.Copy(ioutil.Discard, conn)
-		}
-	}()
-
 	var clientAddr string
 
 	switch co := conn.(type) {
@@ -93,6 +80,25 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 	default:
 		clientAddr = co.RemoteAddr().String()
 	}
+	c := &store.Conn{conn,clientAddr}
+
+	srv.Conns[c] = make(chan interface{})
+	// Read on `conn` in order to detect client disconnect
+	go func() {
+		// Close chan in order to trigger eventual selects
+
+		defer func() {
+			 close(clientChan)
+			 close(srv.Conns[c])
+			 delete(srv.Conns,c)
+			 Debugf("Client disconnected")
+		}()
+
+		// FIXME: move conn within the request.
+		if false {
+			io.Copy(ioutil.Discard, conn)
+		}
+	}()
 
 	for {
 		request, err := parseRequest(conn)
@@ -101,7 +107,7 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 		}
 		request.Host = clientAddr
 		request.ClientChan = clientChan
-		request.RespChan = respchan
+		request.Conn = c
 		reply, err := srv.Apply(request)
 		if err != nil {
 			return err
@@ -118,6 +124,7 @@ func NewServer(c *store.Config) (*Server, error) {
 		Proto:        c.Proto,
 		MonitorChans: []chan string{},
 		methods:      make(map[string]HandlerFn),
+		Conns:make(map[*store.Conn]chan interface{}),
 	}
 
 	if srv.Proto == "unix" {
