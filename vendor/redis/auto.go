@@ -159,12 +159,17 @@ func createCheckers(autoHandler interface{}, f *reflect.Value) ([]CheckerFn, err
 	mtype := f.Type()
 
 	start := 0
+
+
 	// If we are dealing with a method, start at 1 (first being the instance)
 	// Otherwise, start at 0.
 	if mtype.NumIn() > 0 && mtype.In(0).AssignableTo(reflect.TypeOf(autoHandler)) {
 		start = 1
 	}
-
+	if requiresRequsert(mtype){
+		checkers = append(checkers,reqChecker())
+		start = start + 1
+	}
 	for i := start; i < mtype.NumIn(); i += 1 {
 		switch mtype.In(i) {
 		case reflect.TypeOf(""):
@@ -187,6 +192,32 @@ func createCheckers(autoHandler interface{}, f *reflect.Value) ([]CheckerFn, err
 		}
 	}
 	return checkers, nil
+}
+
+func requiresRequsert(handlerType reflect.Type) bool {
+	//if the method doesn't take arguments, no
+	if handlerType.NumIn() == 0 {
+		return false
+	}
+
+	//if the first argument is not a pointer, no
+	a0 := handlerType.In(1)
+	if a0.Kind() != reflect.Ptr {
+		return false
+	}
+	//if the first argument is a context, yes
+
+	if a0.Elem() == reflect.TypeOf(Request{}) {
+		return true
+	}
+
+	return false
+}
+
+func reqChecker() CheckerFn {
+	return func(request *Request) (reflect.Value, ReplyWriter) {
+		return reflect.ValueOf(request), nil
+	}
 }
 
 func stringChecker(index int) CheckerFn {
