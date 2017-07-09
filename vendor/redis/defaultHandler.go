@@ -3,6 +3,7 @@ package redis
 import (
 	"sync"
 	"store"
+	"fmt"
 )
 
 type DefaultHandler struct {
@@ -255,7 +256,7 @@ func (h *DefaultHandler) Set(key string, value []byte) error {
 	return nil
 }
 
-func (h *DefaultHandler) Del(key string, keys ...string) (int, error) {
+func (h *DefaultHandler) Del(r *Request,key string, keys ...string) (int, error) {
 
 	keys = append([]string{key}, keys...)
 	if h.Database == nil {
@@ -268,6 +269,7 @@ func (h *DefaultHandler) Del(key string, keys ...string) (int, error) {
 		bytes = append(bytes,[]byte(k))
 	}
 
+	fmt.Println(r)
 	h.kv.Propose("del",bytes)
 	//return count.(int), nil
 	return 0, nil
