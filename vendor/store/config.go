@@ -18,11 +18,8 @@ type Config struct {
 func DefaultConfig( ConfChangeC chan raftpb.ConfChange,kv *KvStore,port int) *Config {
 	return &Config{
 		Proto:   "tcp",
-		Host:    "127.0.0.1",
+		Host:    ":",
 		Port:    port,
-	//	handler: NewDefaultHandler(),
-		SnapDir:"/home/wida/data/snap/",
-		WalDir:"/home/wida/data/wal/",
 		ConfChangeC:ConfChangeC,
 		Kv:kv,
 	}
