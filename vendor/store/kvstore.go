@@ -82,7 +82,7 @@ func (s *KvStore) readCommits(commitC <-chan *string, errorC <-chan error) {
 		if err := dec.Decode(&dataKv); err != nil {
 			log.Fatalf("raftexample: could not decode message (%v)", err)
 		}
-		log.Printf("do commit %s %s",dataKv.Method,dataKv.Args)
+		//log.Printf("do commit %s %s",dataKv.Method,dataKv.Args)
 		s.mu.Lock()
 
 		switch dataKv.Method {
