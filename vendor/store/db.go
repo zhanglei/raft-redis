@@ -1,6 +1,5 @@
 package store
 
-import "fmt"
 
 type (
 	HashValue   map[string][]byte
@@ -37,7 +36,6 @@ func (d *Database)methodDel(b [][]byte) int {
 	if d == nil {
 		d = NewDatabase()
 	}
-
 	count := 0
 	for _, k := range b {
 		key := string(k)
@@ -126,7 +124,6 @@ func (d *Database)methodSadd(b [][]byte) int {
 	if _, exists := d.Brstack[key]; !exists {
 		d.Hvset[key] = NewSet(key)
 	}
-	fmt.Println("fdfd",key,values)
 	for _,value :=range values {
 		count =count + d.Hvset[key].Add(string(value))
 	}
