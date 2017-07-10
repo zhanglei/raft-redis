@@ -67,6 +67,15 @@ func (h *DefaultHandler) Lrange(key string, start, stop int) ([][]byte, error) {
 	return ret, nil
 }
 
+func (h *DefaultHandler)Llen(key string) (int,error)  {
+	h.rwmu.RLock()
+	defer h.rwmu.RUnlock()
+	if _, exists := h.Brstack[key]; !exists {
+		return 0,nil
+	}
+	return h.Brstack[key].Len(),nil
+}
+
 func (h *DefaultHandler) Lindex(key string, index int) ([]byte, error) {
 	if h.Database == nil {
 		h.Database = store.NewDatabase()
