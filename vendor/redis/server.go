@@ -16,7 +16,6 @@ import (
 )
 
 type Server struct {
-	Proto        string
 	Addr         string // TCP address to listen on, ":6389" if empty
 	MonitorChans []chan string
 	methods      map[string]HandlerFn
@@ -26,15 +25,10 @@ type Server struct {
 
 func (srv *Server) ListenAndServe() error {
 	addr := srv.Addr
-	if srv.Proto == "" {
-		srv.Proto = "tcp"
-	}
-	if srv.Proto == "unix" && addr == "" {
-		addr = "/tmp/redis.sock"
-	} else if addr == "" {
+	if addr == "" {
 		addr = ":6389"
 	}
-	l, e := net.Listen(srv.Proto, addr)
+	l, e := net.Listen("tcp", addr)
 	if e != nil {
 		return e
 	}
@@ -120,7 +114,6 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 
 func NewServer(c *store.Config,conns *map[string]chan interface{}) (*Server, error) {
 	srv := &Server{
-		Proto:        c.Proto,
 		MonitorChans: []chan string{},
 		methods:      make(map[string]HandlerFn),
 		Conns:conns,

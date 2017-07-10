@@ -4,6 +4,8 @@ import (
 	"sync"
 	"store"
 	"errors"
+	"github.com/coreos/etcd/raft/raftpb"
+	"strconv"
 )
 
 type DefaultHandler struct {
@@ -16,6 +18,33 @@ type DefaultHandler struct {
 type Op struct {
 	Method string
 	Args [][]byte
+}
+
+func (h *DefaultHandler) AddNode(id string,url []byte ) error  {
+	nodeId ,err := strconv.ParseUint(id,10,0)
+	if err != nil{
+		return err
+	}
+	cc := raftpb.ConfChange{
+		Type:    raftpb.ConfChangeAddNode,
+		NodeID:  nodeId,
+		Context: url,
+	}
+	h.c.ConfChangeC <- cc
+	return nil
+}
+
+func (h *DefaultHandler) RemoveNode(id string) error  {
+	nodeId ,err := strconv.ParseUint(id,10,0)
+	if err != nil{
+		return err
+	}
+	cc := raftpb.ConfChange{
+		Type:    raftpb.ConfChangeRemoveNode,
+		NodeID:  nodeId,
+	}
+	h.c.ConfChangeC <- cc
+	return nil
 }
 
 //list operation

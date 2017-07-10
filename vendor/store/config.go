@@ -5,7 +5,6 @@ import (
 )
 
 type Config struct {
-	Proto   string
 	Host    string
 	Port    int
 	Handler interface{}
@@ -17,7 +16,6 @@ type Config struct {
 
 func DefaultConfig( ConfChangeC chan raftpb.ConfChange,kv *KvStore,port int) *Config {
 	return &Config{
-		Proto:   "tcp",
 		Host:    "",
 		Port:    port,
 		ConfChangeC:ConfChangeC,
