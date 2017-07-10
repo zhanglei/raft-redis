@@ -18,7 +18,7 @@ type Config struct {
 func DefaultConfig( ConfChangeC chan raftpb.ConfChange,kv *KvStore,port int) *Config {
 	return &Config{
 		Proto:   "tcp",
-		Host:    ":",
+		Host:    "",
 		Port:    port,
 		ConfChangeC:ConfChangeC,
 		Kv:kv,
