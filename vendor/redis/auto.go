@@ -166,7 +166,7 @@ func createCheckers(autoHandler interface{}, f *reflect.Value) ([]CheckerFn, err
 	if mtype.NumIn() > 0 && mtype.In(0).AssignableTo(reflect.TypeOf(autoHandler)) {
 		start = 1
 	}
-	if requiresRequsert(mtype){
+	if requiresRequset(mtype){
 		checkers = append(checkers,reqChecker())
 		start = start + 1
 	}
@@ -194,23 +194,20 @@ func createCheckers(autoHandler interface{}, f *reflect.Value) ([]CheckerFn, err
 	return checkers, nil
 }
 
-func requiresRequsert(handlerType reflect.Type) bool {
+func requiresRequset(handlerType reflect.Type) bool {
 	//if the method doesn't take arguments, no
 	if handlerType.NumIn() == 0 {
 		return false
 	}
-
 	//if the first argument is not a pointer, no
 	a0 := handlerType.In(1)
 	if a0.Kind() != reflect.Ptr {
 		return false
 	}
-	//if the first argument is a context, yes
-
+	//if the first argument is a requset, yes
 	if a0.Elem() == reflect.TypeOf(Request{}) {
 		return true
 	}
-
 	return false
 }
 
