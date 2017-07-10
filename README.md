@@ -1,6 +1,6 @@
 # raft-redis
 
-simple redis server with raft
+simple redis server base raft
 
 
 # useage
