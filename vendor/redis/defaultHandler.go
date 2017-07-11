@@ -293,6 +293,14 @@ func (h *DefaultHandler) Del(r *Request,key string, keys ...string) (int, error)
 	return num.(int), nil
 }
 
+//do nothing
+func (h *DefaultHandler) Select(key string) error {
+	return nil
+}
+
+func (h *DefaultHandler) Ping() (*StatusReply, error) {
+	return &StatusReply{code: "PONG"}, nil
+}
 func NewDefaultHandler( c *store.Config,kv *store.KvStore) *DefaultHandler {
 	ret := &DefaultHandler{
 		kv:kv,
