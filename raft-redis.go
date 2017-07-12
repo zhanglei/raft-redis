@@ -10,11 +10,11 @@ import (
 )
 
 func main() {
-	cluster := flag.String("cluster", "http://127.0.0.1:9021", "comma separated cluster peers")
+	cluster := flag.String("cluster", "http://127.0.0.1:12379", "comma separated cluster peers")
 	id := flag.Int("id", 1, "node ID")
 	kvport := flag.Int("port", 6389, "key-value server port")
 	join := flag.Bool("join", false, "join an existing cluster")
-	dataPath := flag.String("data","data/","store databases")
+	dataDir := flag.String("data-dir","data/","store databases")
 	flag.Parse()
 
 	proposeC := make(chan string)
@@ -25,7 +25,7 @@ func main() {
 	// raft provides a commit stream for the proposals from the http api
 	var kvs *store.KvStore
 	getSnapshot := func() ([]byte, error) { return kvs.GetSnapshot() }
-	commitC, errorC, snapshotterReady := raftd.NewRaftNode(*id, strings.Split(*cluster, ","), *dataPath,*join, getSnapshot, proposeC, confChangeC)
+	commitC, errorC, snapshotterReady := raftd.NewRaftNode(*id, strings.Split(*cluster, ","), strings.TrimRight(*dataDir,"/"),*join, getSnapshot, proposeC, confChangeC)
 
 	kvs = store.NewKVStore(<-snapshotterReady, proposeC, commitC, errorC,&Conns)
 	server, err := redis.NewServer(store.DefaultConfig(confChangeC,kvs,*kvport),&Conns)

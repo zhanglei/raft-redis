@@ -78,7 +78,7 @@ var defaultSnapCount uint64 = 10000
 // provided the proposal channel. All log entries are replayed over the
 // commit channel, followed by a nil message (to indicate the channel is
 // current), then new log entries. To shutdown, close proposeC and read errorC.
-func NewRaftNode(id int, peers []string,dataPath string, join bool, getSnapshot func() ([]byte, error), proposeC <-chan string,
+func NewRaftNode(id int, peers []string,dataDir string, join bool, getSnapshot func() ([]byte, error), proposeC <-chan string,
 	confChangeC <-chan raftpb.ConfChange) (<-chan *string, <-chan error, <-chan *snap.Snapshotter) {
 
 	commitC := make(chan *string)
@@ -92,8 +92,8 @@ func NewRaftNode(id int, peers []string,dataPath string, join bool, getSnapshot 
 		id:          id,
 		peers:       peers,
 		join:        join,
-		waldir:      fmt.Sprintf("%s/raft-redis-%d", dataPath,id),
-		snapdir:     fmt.Sprintf("%s/raft-redis-%d-snap", dataPath,id),
+		waldir:      fmt.Sprintf("%s/raft-redis-%d", dataDir,id),
+		snapdir:     fmt.Sprintf("%s/raft-redis-%d-snap", dataDir,id),
 		getSnapshot: getSnapshot,
 		snapCount:   defaultSnapCount,
 		stopc:       make(chan struct{}),
