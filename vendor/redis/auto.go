@@ -196,7 +196,7 @@ func createCheckers(autoHandler interface{}, f *reflect.Value) ([]CheckerFn, err
 
 func requiresRequset(handlerType reflect.Type) bool {
 	//if the method doesn't take arguments, no
-	if handlerType.NumIn() == 0 {
+	if handlerType.NumIn() < 2 {
 		return false
 	}
 	//if the first argument is not a pointer, no
