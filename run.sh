@@ -15,7 +15,7 @@ else
         echo "Detected new ADVERTISE_URLS value of $CLUSTER"
 fi
 
-REDIS_CMD="/bin/etcd -data-dir=/data --cluster=${CLUSTER} --port=${LISTEN_PORT} $*"
+REDIS_CMD="/bin/raft-redis -data-dir=/data --cluster=${CLUSTER} --port=${LISTEN_PORT} $*"
 echo -e "Running '$REDIS_CMD'\nBEGIN RAFT_REDIS OUTPUT\n"
 
 exec $REDIS_CMD
