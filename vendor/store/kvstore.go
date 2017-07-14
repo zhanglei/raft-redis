@@ -137,8 +137,10 @@ func (s *KvStore) readCommits(commitC <-chan *string, errorC <-chan error) {
 
 func (h *KvStore) GetSnapshot()  ([]byte, error) {
 	var b bytes.Buffer
+	h.mu.Lock()
 	enc := gob.NewEncoder(&b)
 	enc.Encode(*h.Redis)
+	h.mu.Unlock()
 	return b.Bytes(),nil
 }
 
