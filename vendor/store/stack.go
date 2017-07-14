@@ -5,35 +5,35 @@ import (
 )
 
 type Stack struct {
-	sync.Mutex
+	mu sync.Mutex
 	Key   string
-	stack [][]byte
+	Stack [][]byte
 	Chan  chan *Stack
 }
 
 func (s *Stack) PopBack() []byte {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if s.stack == nil || len(s.stack) == 0 {
+	if s.Stack == nil || len(s.Stack) == 0 {
 		return nil
 	}
 
 	var ret []byte
-	if len(s.stack)-1 == 0 {
-		ret, s.stack = s.stack[0], [][]byte{}
+	if len(s.Stack)-1 == 0 {
+		ret, s.Stack = s.Stack[0], [][]byte{}
 	} else {
-		ret, s.stack = s.stack[len(s.stack)-1], s.stack[:len(s.stack)-1]
+		ret, s.Stack = s.Stack[len(s.Stack)-1], s.Stack[:len(s.Stack)-1]
 	}
 	return ret
 }
 
 func (s *Stack) PushBack(val []byte) {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if s.stack == nil {
-		s.stack = [][]byte{}
+	if s.Stack == nil {
+		s.Stack = [][]byte{}
 	}
 
 	go func() {
@@ -41,35 +41,35 @@ func (s *Stack) PushBack(val []byte) {
 			s.Chan <- s
 		}
 	}()
-	s.stack = append(s.stack, val)
+	s.Stack = append(s.Stack, val)
 }
 
 func (s *Stack) PopFront() []byte {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if s.stack == nil || len(s.stack) == 0 {
+	if s.Stack == nil || len(s.Stack) == 0 {
 		return nil
 	}
 
 	var ret []byte
-	if len(s.stack)-1 == 0 {
-		ret, s.stack = s.stack[0], [][]byte{}
+	if len(s.Stack)-1 == 0 {
+		ret, s.Stack = s.Stack[0], [][]byte{}
 	} else {
-		ret, s.stack = s.stack[0], s.stack[1:]
+		ret, s.Stack = s.Stack[0], s.Stack[1:]
 	}
 	return ret
 }
 
 func (s *Stack) PushFront(val []byte) {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if s.stack == nil {
-		s.stack = [][]byte{}
+	if s.Stack == nil {
+		s.Stack = [][]byte{}
 	}
 
-	s.stack = append([][]byte{val}, s.stack...)
+	s.Stack = append([][]byte{val}, s.Stack...)
 	go func() {
 		if s.Chan != nil {
 			s.Chan <- s
@@ -80,30 +80,30 @@ func (s *Stack) PushFront(val []byte) {
 // GetIndex return the element at the requested index.
 // If no element correspond, return nil.
 func (s *Stack) GetIndex(index int) []byte {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if index < 0 {
-		if len(s.stack)+index >= 0 {
-			return s.stack[len(s.stack)+index]
+		if len(s.Stack)+index >= 0 {
+			return s.Stack[len(s.Stack)+index]
 		}
 		return nil
 	}
-	if len(s.stack) > index {
-		return s.stack[index]
+	if len(s.Stack) > index {
+		return s.Stack[index]
 	}
 	return nil
 }
 
 func (s *Stack) Len() int {
-	s.Lock()
-	defer s.Unlock()
-	return len(s.stack)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.Stack)
 }
 
 func NewStack(key string) *Stack {
 	return &Stack{
-		stack: [][]byte{},
+		Stack: [][]byte{},
 		Chan:  make(chan *Stack),
 		Key:   key,
 	}

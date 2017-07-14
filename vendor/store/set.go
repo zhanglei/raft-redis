@@ -5,23 +5,23 @@ import (
 )
 
 type Set struct {
-	sync.Mutex
+	mu sync.Mutex
 	Key   string
-	set   map[string]struct{}
+	Set   map[string]struct{}
 }
 
 func (s *Set) Len() int {
-	s.Lock()
-	defer s.Unlock()
-	return len(s.set)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.Set)
 }
 
 func (s *Set) Add(key string) int  {
-	s.Lock()
-	defer  s.Unlock()
+	s.mu.Lock()
+	defer  s.mu.Unlock()
 
-	if _,found := s.set[key];!found  {
-		s.set[key] = struct{}{}
+	if _,found := s.Set[key];!found  {
+		s.Set[key] = struct{}{}
 	}else{
 		return 0
 	}
@@ -29,28 +29,28 @@ func (s *Set) Add(key string) int  {
 }
 
 func (s *Set)Del(key string) error  {
-	s.Lock()
-	defer  s.Unlock()
-	delete(s.set,key)
+	s.mu.Lock()
+	defer  s.mu.Unlock()
+	delete(s.Set,key)
 	return nil
 }
 
 func (s *Set)Members() *[][]byte {
-	s.Lock()
-	defer  s.Unlock()
+	s.mu.Lock()
+	defer  s.mu.Unlock()
 	var ret [][]byte
 
-	for key,_:=range s.set {
+	for key,_:=range s.Set {
 		ret = append(ret,[]byte(key))
 	}
 	return &ret
 }
 
 func (s *Set) Exists(key string) int {
-	s.Lock()
-	defer  s.Unlock()
+	s.mu.Lock()
+	defer  s.mu.Unlock()
 
-	if _,found:= s.set[key] ; found {
+	if _,found:= s.Set[key] ; found {
 		return 1
 	}
 	return 0
@@ -59,6 +59,6 @@ func (s *Set) Exists(key string) int {
 func NewSet(key string) *Set {
 	return &Set{
 		Key:   key,
-		set: make(map[string]struct{}),
+		Set: make(map[string]struct{}),
 	}
 }
