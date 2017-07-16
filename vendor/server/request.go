@@ -1,4 +1,4 @@
-package redis
+package server
 
 import (
 	"io"
@@ -12,7 +12,6 @@ type Request struct {
 	ClientChan chan struct{}
 	Body       io.ReadCloser
 	Conn       string
-	Conns      *map[string]chan interface{}
 }
 
 func (r *Request) HasArgument(index int) bool {

@@ -1,45 +1,9 @@
 package main
 
 import (
-	"flag"
-	"raft"
-	"strings"
-	"github.com/coreos/etcd/raft/raftpb"
-	"store"
-	"redis"
+	"server"
 )
 
 func main() {
-	cluster := flag.String("cluster", "http://127.0.0.1:12379", "comma separated cluster peers")
-	id := flag.Int("id", 1, "node ID")
-	kvport := flag.Int("port", 6389, "key-value server port")
-	join := flag.Bool("join", false, "join an existing cluster")
-	dataDir := flag.String("data-dir","data/","store databases")
-	flag.Parse()
-
-	proposeC := make(chan string)
-	defer close(proposeC)
-	confChangeC := make(chan raftpb.ConfChange)
-	defer close(confChangeC)
-	Conns := make( map[string]chan interface{})
-	// raft provides a commit stream for the proposals from the http api
-	var kvs *store.KvStore
-	getSnapshot := func() ([]byte, error) { return kvs.GetSnapshot() }
-	commitC, errorC, snapshotterReady := raftd.NewRaftNode(*id, strings.Split(*cluster, ","), strings.TrimRight(*dataDir,"/"),*join, getSnapshot, proposeC, confChangeC)
-
-	kvs = store.NewKVStore(<-snapshotterReady, proposeC, commitC, errorC,&Conns)
-	server, err := redis.NewServer(store.DefaultConfig(confChangeC,kvs,*kvport),&Conns)
-	if err != nil {
-		panic(err)
-	}
-	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			panic(err)
-		}
-	}()
-
-	// exit when raftd goes down
-	if err, ok := <-errorC; ok {
-		panic(err)
-	}
+	server.Main()
 }

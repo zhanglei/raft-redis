@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package store
+package server
 
 import (
 	"bytes"
@@ -23,13 +23,13 @@ import (
 	"github.com/coreos/etcd/snap"
 )
 
+var Kvs * KvStore
 // a key-value store backed by raftd
 type KvStore struct {
 	proposeC    chan<- string // channel for proposing updates
 	mu          sync.RWMutex
 	Redis       *Database
 	snapshotter *snap.Snapshotter
-	Conns *map[string]chan interface{}
 }
 
 type kv struct {
@@ -38,13 +38,12 @@ type kv struct {
 	Conn string
 }
 
-func NewKVStore(snapshotter *snap.Snapshotter, proposeC chan<- string, commitC <-chan *string, errorC <-chan error,Conns  *map[string]chan interface{}) *KvStore {
-	s := &KvStore{proposeC: proposeC, Redis: NewDatabase(), snapshotter: snapshotter,Conns:Conns}
+func Run(proposeC chan<- string) {
+	Kvs.snapshotter = <-snapshotterReady
 	// replay log into key-value map
-	s.readCommits(commitC, errorC)
+	Kvs.readCommits(commitC, errorC)
 	// read commits from raftd into kvStore map until error
-	go s.readCommits(commitC, errorC)
-	return s
+	go Kvs.readCommits(commitC, errorC)
 }
 
 
@@ -90,38 +89,38 @@ func (s *KvStore) readCommits(commitC <-chan *string, errorC <-chan error) {
 			s.Redis.methodSet(dataKv.Args)
 		case "del" :
 			num := s.Redis.methodDel(dataKv.Args)
-			if respchan,found :=(*s.Conns)[dataKv.Conn];found {
+			if respchan,found :=Conns[dataKv.Conn];found {
 				respchan <- num
 			}
 		case "hset":
 			num := s.Redis.methodHset(dataKv.Args)
-			if respchan,found :=(*s.Conns)[dataKv.Conn];found {
+			if respchan,found :=Conns[dataKv.Conn];found {
 				respchan <- num
 			}
 
 		case "rpush":
 			num := s.Redis.methodRpush(dataKv.Args)
-			if respchan,found :=(*s.Conns)[dataKv.Conn];found {
+			if respchan,found :=Conns[dataKv.Conn];found {
 				respchan <- num
 			}
 		case "lpush":
 			num := s.Redis.methodLpush(dataKv.Args)
-			if respchan,found :=(*s.Conns)[dataKv.Conn];found {
+			if respchan,found :=Conns[dataKv.Conn];found {
 				respchan <- num
 			}
 		case "lpop":
 			byteArr := s.Redis.methodLpop(dataKv.Args)
-			if respchan,found :=(*s.Conns)[dataKv.Conn];found {
+			if respchan,found :=Conns[dataKv.Conn];found {
 				respchan <- byteArr
 			}
 		case "rpop":
 			byteArr := s.Redis.methodRpop(dataKv.Args)
-			if respchan,found :=(*s.Conns)[dataKv.Conn];found {
+			if respchan,found :=Conns[dataKv.Conn];found {
 				respchan <- byteArr
 			}
 		case "sadd":
 			num := s.Redis.methodSadd(dataKv.Args)
-			if respchan,found :=(*s.Conns)[dataKv.Conn];found {
+			if respchan,found :=Conns[dataKv.Conn];found {
 				respchan <- num
 			}
 

@@ -2,7 +2,7 @@
 // This could be an alternate implementation of redis, a custom proxy to redis,
 // or even a completely different backend capable of "masquerading" its API as a redis database.
 
-package redis
+package server
 
 import (
 	"fmt"
@@ -11,8 +11,19 @@ import (
 	"net"
 	"reflect"
 	"github.com/coreos/etcd/raft/raftpb"
-	"store"
 	"time"
+	"flag"
+	"strings"
+	"github.com/coreos/etcd/snap"
+)
+
+var (
+	Conns = make( map[string]chan interface{})
+	proposeC = make(chan string)
+	confChangeC = make(chan raftpb.ConfChange)
+	commitC = make(chan *string)
+	errorC = make(chan error)
+	snapshotterReady = make(chan *snap.Snapshotter, 1)
 )
 
 type Server struct {
@@ -20,7 +31,6 @@ type Server struct {
 	MonitorChans []chan string
 	methods      map[string]HandlerFn
 	confChangeC chan<- raftpb.ConfChange
-	Conns *map[string]chan interface{}
 }
 
 func (srv *Server) ListenAndServe() error {
@@ -68,13 +78,13 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 	}
 	c := fmt.Sprintf("%s%d",clientAddr,time.Now().UnixNano())
 
-	(*srv.Conns)[c] = make(chan interface{})
+	Conns[c] = make(chan interface{})
 	defer func() {
 		if err != nil {
 			fmt.Fprintf(conn, "-%s\n", err)
 		}
-		close((*srv.Conns)[c])
-		delete(*srv.Conns,c)
+		close(Conns[c])
+		delete(Conns,c)
 		conn.Close()
 	}()
 	// Read on `conn` in order to detect client disconnect
@@ -100,7 +110,6 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 		request.Host = clientAddr
 		request.ClientChan = clientChan
 		request.Conn = c
-		request.Conns = srv.Conns
 		reply, err := srv.Apply(request)
 		if err != nil {
 			return err
@@ -112,17 +121,18 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 	return nil
 }
 
-func NewServer(c *store.Config,conns *map[string]chan interface{}) (*Server, error) {
+func NewServer(c *Config) (*Server, error) {
 	srv := &Server{
 		MonitorChans: []chan string{},
 		methods:      make(map[string]HandlerFn),
-		Conns:conns,
 	}
 
 	srv.Addr = fmt.Sprintf("%s:%d", c.Host, c.Port)
 
 	if c.Handler == nil {
-		c.Handler = NewDefaultHandler(c,c.Kv)
+
+		time.Sleep(1*time.Second)
+		c.Handler = Kvs.Redis
 	}
 
 	rh := reflect.TypeOf(c.Handler)
@@ -140,4 +150,31 @@ func NewServer(c *store.Config,conns *map[string]chan interface{}) (*Server, err
 	return srv, nil
 }
 
+func Main()  {
+	cluster := flag.String("cluster", "http://127.0.0.1:12379", "comma separated cluster peers")
+	id := flag.Int("id", 1, "node ID")
+	kvport := flag.Int("port", 6389, "key-value server port")
+	join := flag.Bool("join", false, "join an existing cluster")
+	dataDir := flag.String("data-dir","data/","store databases")
+	flag.Parse()
 
+	defer close(proposeC)
+	defer close(confChangeC)
+	Kvs = &KvStore{proposeC: proposeC, Redis: NewDatabase()}
+	NewRaftNode(*id, strings.Split(*cluster, ","), strings.TrimRight(*dataDir,"/"),*join)
+	Run(proposeC)
+	server, err := NewServer(DefaultConfig(*kvport))
+	if err != nil {
+		panic(err)
+	}
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			panic(err)
+		}
+	}()
+
+	// exit when raftd goes down
+	if err, ok := <-errorC; ok {
+		panic(err)
+	}
+}

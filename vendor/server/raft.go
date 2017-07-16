@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package raftd
+package server
 
 import (
 	"fmt"
@@ -34,7 +34,6 @@ import (
 	"github.com/coreos/etcd/wal"
 	"github.com/coreos/etcd/wal/walpb"
 	"golang.org/x/net/context"
-	"listener"
 )
 
 // A key-value stream backed by raftd
@@ -49,7 +48,6 @@ type raftNode struct {
 	join        bool     // node is joining an existing cluster
 	waldir      string   // path to WAL directory
 	snapdir     string   // path to snapshot directory
-	getSnapshot func() ([]byte, error)
 	lastIndex   uint64 // index of log at start
 
 	confState     raftpb.ConfState
@@ -69,6 +67,8 @@ type raftNode struct {
 	stopc     chan struct{} // signals proposal channel closed
 	httpstopc chan struct{} // signals http server to shutdown
 	httpdonec chan struct{} // signals http server shutdown complete
+
+	db *KvStore
 }
 
 var defaultSnapCount uint64 = 10000
@@ -78,12 +78,7 @@ var defaultSnapCount uint64 = 10000
 // provided the proposal channel. All log entries are replayed over the
 // commit channel, followed by a nil message (to indicate the channel is
 // current), then new log entries. To shutdown, close proposeC and read errorC.
-func NewRaftNode(id int, peers []string,dataDir string, join bool, getSnapshot func() ([]byte, error), proposeC <-chan string,
-	confChangeC <-chan raftpb.ConfChange) (<-chan *string, <-chan error, <-chan *snap.Snapshotter) {
-
-	commitC := make(chan *string)
-	errorC := make(chan error)
-
+func NewRaftNode(id int, peers []string,dataDir string, join bool)  {
 	rc := &raftNode{
 		proposeC:    proposeC,
 		confChangeC: confChangeC,
@@ -94,17 +89,15 @@ func NewRaftNode(id int, peers []string,dataDir string, join bool, getSnapshot f
 		join:        join,
 		waldir:      fmt.Sprintf("%s/raft-redis-%d", dataDir,id),
 		snapdir:     fmt.Sprintf("%s/raft-redis-%d-snap", dataDir,id),
-		getSnapshot: getSnapshot,
 		snapCount:   defaultSnapCount,
 		stopc:       make(chan struct{}),
 		httpstopc:   make(chan struct{}),
 		httpdonec:   make(chan struct{}),
-
-		snapshotterReady: make(chan *snap.Snapshotter, 1),
+		db : Kvs,
+		snapshotterReady: snapshotterReady,
 		// rest of structure populated after WAL replay
 	}
 	go rc.startRaft()
-	return commitC, errorC, rc.snapshotterReady
 }
 
 func (rc *raftNode) saveSnap(snap raftpb.Snapshot) error {
@@ -349,7 +342,7 @@ func (rc *raftNode) maybeTriggerSnapshot() {
 	}
 
 	log.Printf("start snapshot [applied index: %d | last snapshot index: %d]", rc.appliedIndex, rc.snapshotIndex)
-	data, err := rc.getSnapshot()
+	data, err := rc.db.GetSnapshot()
 	if err != nil {
 		log.Panic(err)
 	}
@@ -455,7 +448,7 @@ func (rc *raftNode) serveRaft() {
 		log.Fatalf("raft-redis: Failed parsing URL (%v)", err)
 	}
 
-	ln, err := listener.NewStoppableListener(url.Host, rc.httpstopc)
+	ln, err := NewStoppableListener(url.Host, rc.httpstopc)
 	if err != nil {
 		log.Fatalf("raft-redis: Failed to listen rafthttp (%v)", err)
 	}

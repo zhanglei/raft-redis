@@ -1,4 +1,4 @@
-package redis
+package server
 
 import (
 	"bytes"
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"reflect"
 	"time"
-	"store"
 )
 
 type CheckerFn func(request *Request) (reflect.Value, ReplyWriter)
@@ -99,7 +98,7 @@ func (srv *Server) handlerFn(autoHandler interface{}, f *reflect.Value, checkers
 	}, nil
 }
 
-func hashValueReply(v store.HashValue) (*MultiBulkReply, error) {
+func hashValueReply(v HashValue) (*MultiBulkReply, error) {
 	m := make(map[string]interface{})
 	for k, v := range v {
 		m[k] = v
@@ -125,7 +124,7 @@ func (srv *Server) createReply(r *Request, val interface{}) (ReplyWriter, error)
 		return &MultiBulkReply{values: m}, nil
 	case []byte:
 		return &BulkReply{value: v}, nil
-	case store.HashValue:
+	case HashValue:
 		return hashValueReply(v)
 	case map[string][]byte:
 		return hashValueReply(v)

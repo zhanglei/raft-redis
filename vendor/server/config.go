@@ -1,4 +1,4 @@
-package store
+package server
 
 import (
 	"github.com/coreos/etcd/raft/raftpb"
@@ -11,15 +11,13 @@ type Config struct {
 	SnapDir string
 	WalDir  string
 	ConfChangeC chan<- raftpb.ConfChange
-	Kv *KvStore
 }
 
-func DefaultConfig( ConfChangeC chan raftpb.ConfChange,kv *KvStore,port int) *Config {
+func DefaultConfig(port int) *Config {
 	return &Config{
 		Host:    "",
 		Port:    port,
-		ConfChangeC:ConfChangeC,
-		Kv:kv,
+		ConfChangeC:confChangeC,
 	}
 }
 
