@@ -165,7 +165,7 @@ func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 				rc.transport.RemovePeer(types.ID(cc.NodeID))
 			}
 		}
-		println(ents[i].Type,ents[i].Index ,rc.lastIndex )
+		//println(ents[i].Type,ents[i].Index ,rc.lastIndex )
 		// after commit, update appliedIndex
 		rc.appliedIndex = ents[i].Index
 
@@ -424,14 +424,12 @@ func (rc *raftNode) serveChannels() {
 		// store raftd entries to wal, then publish over commit channel
 		case rd := <-rc.node.Ready():
 
-			println("ready1 ")
 			rc.wal.Save(rd.HardState, rd.Entries)
 			if !raft.IsEmptySnap(rd.Snapshot) {
 				rc.saveSnap(rd.Snapshot)
 				rc.raftStorage.ApplySnapshot(rd.Snapshot)
 				rc.publishSnapshot(rd.Snapshot)
 			}
-			println("ready2 ")
 			rc.raftStorage.Append(rd.Entries)
 			rc.transport.Send(rd.Messages)
 			if ok := rc.publishEntries(rc.entriesToApply(rd.CommittedEntries)); !ok {
@@ -439,7 +437,6 @@ func (rc *raftNode) serveChannels() {
 				return
 			}
 			rc.maybeTriggerSnapshot()
-			println("ready 3")
 			rc.node.Advance()
 
 		case err := <-rc.transport.ErrorC:

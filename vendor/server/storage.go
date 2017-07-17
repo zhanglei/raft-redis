@@ -45,7 +45,7 @@ func (s *Storage) Propose(m string, a [][]byte,conn string) {
 func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 	for data := range commitC {
 		if data == nil {
-			println(" readCommits recive nil")
+			//println(" readCommits recive nil")
 			// done replaying log; new data incoming
 			// OR signaled to load snapshot
 			snapshot, err := s.snapshotter.Load()
@@ -61,7 +61,6 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 			}
 			continue
 		}else {
-
 			if *data == "" {
 				continue
 			}
@@ -121,7 +120,6 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 		}
 		s.mu.Unlock()
 	}
-	println("no running now")
 	if err, ok := <-errorC; ok {
 		log.Fatal(err)
 	}
