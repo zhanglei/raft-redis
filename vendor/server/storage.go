@@ -62,6 +62,10 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 			}
 			continue
 		}else {
+
+			if *data == "" {
+				continue
+			}
 			println(*data)
 		}
 
