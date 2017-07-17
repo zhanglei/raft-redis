@@ -71,7 +71,7 @@ type raftNode struct {
 	db *Storage
 }
 
-var defaultSnapCount uint64 = 10000
+var defaultSnapCount uint64 = 10
 
 // newRaftNode initiates a raftd instance and returns a committed log entry
 // channel and error channel. Proposals for log updates are sent over the
