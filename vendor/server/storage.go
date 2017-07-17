@@ -6,6 +6,7 @@ import (
 	"log"
 	"sync"
 	"github.com/coreos/etcd/snap"
+	"encoding/json"
 )
 
 var _Storage * Storage
@@ -31,11 +32,19 @@ func Run(proposeC chan<- string) {
 }
 
 func (s *Storage) Propose(m string, a [][]byte,conn string) {
-	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(kv{m,a,conn}); err != nil {
+	//var buf bytes.Buffer
+
+
+/*	if err := gob.NewEncoder(&buf).Encode(kv{m,a,conn}); err != nil {
 		log.Fatal(err)
 	}
-	s.proposeC <- string(buf.Bytes())
+	s.proposeC <- string(buf.Bytes())*/
+
+	buf,err := json.Marshal(kv{m,a,conn})
+	if err != nil {
+		log.Fatal(err)
+	}
+	s.proposeC <- string(buf)
 }
 
 func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
@@ -58,8 +67,12 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 		}
 
 		var dataKv kv
-		dec := gob.NewDecoder(bytes.NewBufferString(*data))
+/*		dec := gob.NewDecoder(bytes.NewBufferString(*data))
 		if err := dec.Decode(&dataKv); err != nil {
+			log.Fatalf("raft-redis: could not decode message (%v)", err)
+		}*/
+		err := json.Unmarshal([]byte(*data),&dataKv)
+		if err != nil {
 			log.Fatalf("raft-redis: could not decode message (%v)", err)
 		}
 		log.Printf("do commit %s %s",dataKv.Method,dataKv.Args)
