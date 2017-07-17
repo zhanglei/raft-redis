@@ -26,7 +26,7 @@ type kv struct {
 func Run(proposeC chan<- string) {
 	_Storage.snapshotter = <-snapshotterReady
 	// replay log into key-value map
-	_Storage.readCommits(commitC, errorC)
+	//_Storage.readCommits(commitC, errorC)
 	// read commits from raftd into kvStore map until error
 	go _Storage.readCommits(commitC, errorC)
 }
