@@ -47,6 +47,8 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 
 
 		if data == nil {
+
+			println("recive nil")
 			// done replaying log; new data incoming
 			// OR signaled to load snapshot
 			snapshot, err := s.snapshotter.Load()

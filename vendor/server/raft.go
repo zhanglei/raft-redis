@@ -131,6 +131,7 @@ func (rc *raftNode) entriesToApply(ents []raftpb.Entry) (nents []raftpb.Entry) {
 // publishEntries writes committed log entries to commit channel and returns
 // whether all entries could be published.
 func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
+	println("publishEntries init ")
 	for i := range ents {
 		switch ents[i].Type {
 		case raftpb.EntryNormal:
@@ -420,13 +421,14 @@ func (rc *raftNode) serveChannels() {
 		// store raftd entries to wal, then publish over commit channel
 		case rd := <-rc.node.Ready():
 
-			println("read ")
+			println("ready1 ")
 			rc.wal.Save(rd.HardState, rd.Entries)
 			if !raft.IsEmptySnap(rd.Snapshot) {
 				rc.saveSnap(rd.Snapshot)
 				rc.raftStorage.ApplySnapshot(rd.Snapshot)
 				rc.publishSnapshot(rd.Snapshot)
 			}
+			println("ready2 ")
 			rc.raftStorage.Append(rd.Entries)
 			rc.transport.Send(rd.Messages)
 			if ok := rc.publishEntries(rc.entriesToApply(rd.CommittedEntries)); !ok {
@@ -434,6 +436,7 @@ func (rc *raftNode) serveChannels() {
 				return
 			}
 			rc.maybeTriggerSnapshot()
+			println("ready 3")
 			rc.node.Advance()
 
 		case err := <-rc.transport.ErrorC:
