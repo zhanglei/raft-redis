@@ -420,7 +420,7 @@ func (rc *raftNode) serveChannels() {
 		// store raftd entries to wal, then publish over commit channel
 		case rd := <-rc.node.Ready():
 
-			println("read ",rd)
+			println("read ")
 			rc.wal.Save(rd.HardState, rd.Entries)
 			if !raft.IsEmptySnap(rd.Snapshot) {
 				rc.saveSnap(rd.Snapshot)
