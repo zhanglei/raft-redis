@@ -45,7 +45,7 @@ func (s *Storage) Propose(m string, a [][]byte,conn string) {
 func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 	for data := range commitC {
 
-
+		println("ddddd==================")
 		if data == nil {
 
 			println("recive nil")
