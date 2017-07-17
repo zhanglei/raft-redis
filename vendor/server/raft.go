@@ -132,6 +132,10 @@ func (rc *raftNode) entriesToApply(ents []raftpb.Entry) (nents []raftpb.Entry) {
 // whether all entries could be published.
 func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 	for i := range ents {
+
+
+
+
 		switch ents[i].Type {
 		case raftpb.EntryNormal:
 			if len(ents[i].Data) == 0 {
@@ -162,7 +166,7 @@ func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 				rc.transport.RemovePeer(types.ID(cc.NodeID))
 			}
 		}
-
+		println(ents[i].Type,ents[i].Index ,rc.lastIndex )
 		// after commit, update appliedIndex
 		rc.appliedIndex = ents[i].Index
 
