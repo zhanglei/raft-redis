@@ -127,6 +127,8 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 	if err, ok := <-errorC; ok {
 		log.Fatal(err)
 	}
+
+	println("no running now")
 }
 
 func (h *Storage) GetSnapshot()  ([]byte, error) {
