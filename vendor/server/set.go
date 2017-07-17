@@ -19,7 +19,6 @@ func (s *Set) Len() int {
 func (s *Set) Add(key string) int  {
 	s.mu.Lock()
 	defer  s.mu.Unlock()
-
 	if _,found := s.Set[key];!found  {
 		s.Set[key] = struct{}{}
 	}else{
@@ -49,7 +48,6 @@ func (s *Set)Members() *[][]byte {
 func (s *Set) Exists(key string) int {
 	s.mu.Lock()
 	defer  s.mu.Unlock()
-
 	if _,found:= s.Set[key] ; found {
 		return 1
 	}

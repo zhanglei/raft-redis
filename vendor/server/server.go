@@ -10,11 +10,11 @@ import (
 	"io/ioutil"
 	"net"
 	"reflect"
-	"github.com/coreos/etcd/raft/raftpb"
 	"time"
 	"flag"
 	"strings"
 	"github.com/coreos/etcd/snap"
+	"github.com/coreos/etcd/raft/raftpb"
 )
 
 var (

@@ -9,7 +9,6 @@ import (
 )
 
 var _Storage * Storage
-// a key-value store backed by raftd
 type Storage struct {
 	proposeC    chan<- string // channel for proposing updates
 	mu          sync.RWMutex
@@ -31,14 +30,11 @@ func Run(proposeC chan<- string) {
 	go _Storage.readCommits(commitC, errorC)
 }
 
-
-
 func (s *Storage) Propose(m string, a [][]byte,conn string) {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(kv{m,a,conn}); err != nil {
 		log.Fatal(err)
 	}
-
 	s.proposeC <- string(buf.Bytes())
 }
 
@@ -64,9 +60,9 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 		var dataKv kv
 		dec := gob.NewDecoder(bytes.NewBufferString(*data))
 		if err := dec.Decode(&dataKv); err != nil {
-			log.Fatalf("raftexample: could not decode message (%v)", err)
+			log.Fatalf("raft-redis: could not decode message (%v)", err)
 		}
-		//log.Printf("do commit %s %s",dataKv.Method,dataKv.Args)
+		log.Printf("do commit %s %s",dataKv.Method,dataKv.Args)
 		s.mu.Lock()
 
 		switch dataKv.Method {
@@ -82,7 +78,6 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 			if respchan,found :=Conns[dataKv.Conn];found {
 				respchan <- num
 			}
-
 		case "rpush":
 			num := s.Redis.methodRpush(dataKv.Args)
 			if respchan,found :=Conns[dataKv.Conn];found {
@@ -108,7 +103,6 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 			if respchan,found :=Conns[dataKv.Conn];found {
 				respchan <- num
 			}
-
 		default:
 			//do nothing*/
 		}
@@ -119,12 +113,12 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 	}
 }
 
-func (h *Storage) GetSnapshot()  ([]byte, error) {
+func (s *Storage) GetSnapshot()  ([]byte, error) {
 	var b bytes.Buffer
-	h.mu.Lock()
+	s.mu.Lock()
 	enc := gob.NewEncoder(&b)
-	enc.Encode(*h.Redis)
-	h.mu.Unlock()
+	enc.Encode(*s.Redis)
+	s.mu.Unlock()
 	return b.Bytes(),nil
 }
 

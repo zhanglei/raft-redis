@@ -18,7 +18,6 @@ func (s *Stack) PopBack() []byte {
 	if s.Stack == nil || len(s.Stack) == 0 {
 		return nil
 	}
-
 	var ret []byte
 	if len(s.Stack)-1 == 0 {
 		ret, s.Stack = s.Stack[0], [][]byte{}
@@ -35,7 +34,6 @@ func (s *Stack) PushBack(val []byte) {
 	if s.Stack == nil {
 		s.Stack = [][]byte{}
 	}
-
 	go func() {
 		if s.Chan != nil {
 			s.Chan <- s
@@ -51,7 +49,6 @@ func (s *Stack) PopFront() []byte {
 	if s.Stack == nil || len(s.Stack) == 0 {
 		return nil
 	}
-
 	var ret []byte
 	if len(s.Stack)-1 == 0 {
 		ret, s.Stack = s.Stack[0], [][]byte{}
@@ -64,11 +61,9 @@ func (s *Stack) PopFront() []byte {
 func (s *Stack) PushFront(val []byte) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	if s.Stack == nil {
 		s.Stack = [][]byte{}
 	}
-
 	s.Stack = append([][]byte{val}, s.Stack...)
 	go func() {
 		if s.Chan != nil {
