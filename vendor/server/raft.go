@@ -68,7 +68,7 @@ type raftNode struct {
 	httpstopc chan struct{} // signals http server to shutdown
 	httpdonec chan struct{} // signals http server shutdown complete
 
-	db *KvStore
+	db *Storage
 }
 
 var defaultSnapCount uint64 = 10000
@@ -93,7 +93,7 @@ func NewRaftNode(id int, peers []string,dataDir string, join bool)  {
 		stopc:       make(chan struct{}),
 		httpstopc:   make(chan struct{}),
 		httpdonec:   make(chan struct{}),
-		db : Kvs,
+		db : _Storage,
 		snapshotterReady: snapshotterReady,
 		// rest of structure populated after WAL replay
 	}

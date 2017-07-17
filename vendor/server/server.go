@@ -132,7 +132,7 @@ func NewServer(c *Config) (*Server, error) {
 	if c.Handler == nil {
 
 		time.Sleep(1*time.Second)
-		c.Handler = Kvs.Redis
+		c.Handler = _Storage.Redis
 	}
 
 	rh := reflect.TypeOf(c.Handler)
@@ -160,7 +160,7 @@ func Main()  {
 
 	defer close(proposeC)
 	defer close(confChangeC)
-	Kvs = &KvStore{proposeC: proposeC, Redis: NewDatabase()}
+	_Storage = &Storage{proposeC: proposeC, Redis: NewDatabase()}
 	NewRaftNode(*id, strings.Split(*cluster, ","), strings.TrimRight(*dataDir,"/"),*join)
 	Run(proposeC)
 	server, err := NewServer(DefaultConfig(*kvport))

@@ -1,17 +1,3 @@
-// Copyright 2015 The etcd Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package server
 
 import (
@@ -19,13 +5,12 @@ import (
 	"encoding/gob"
 	"log"
 	"sync"
-
 	"github.com/coreos/etcd/snap"
 )
 
-var Kvs * KvStore
+var _Storage * Storage
 // a key-value store backed by raftd
-type KvStore struct {
+type Storage struct {
 	proposeC    chan<- string // channel for proposing updates
 	mu          sync.RWMutex
 	Redis       *Database
@@ -39,16 +24,16 @@ type kv struct {
 }
 
 func Run(proposeC chan<- string) {
-	Kvs.snapshotter = <-snapshotterReady
+	_Storage.snapshotter = <-snapshotterReady
 	// replay log into key-value map
-	Kvs.readCommits(commitC, errorC)
+	_Storage.readCommits(commitC, errorC)
 	// read commits from raftd into kvStore map until error
-	go Kvs.readCommits(commitC, errorC)
+	go _Storage.readCommits(commitC, errorC)
 }
 
 
 
-func (s *KvStore) Propose(m string, a [][]byte,conn string) {
+func (s *Storage) Propose(m string, a [][]byte,conn string) {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(kv{m,a,conn}); err != nil {
 		log.Fatal(err)
@@ -57,7 +42,7 @@ func (s *KvStore) Propose(m string, a [][]byte,conn string) {
 	s.proposeC <- string(buf.Bytes())
 }
 
-func (s *KvStore) readCommits(commitC <-chan *string, errorC <-chan error) {
+func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 	for data := range commitC {
 		if data == nil {
 			// done replaying log; new data incoming
@@ -134,7 +119,7 @@ func (s *KvStore) readCommits(commitC <-chan *string, errorC <-chan error) {
 	}
 }
 
-func (h *KvStore) GetSnapshot()  ([]byte, error) {
+func (h *Storage) GetSnapshot()  ([]byte, error) {
 	var b bytes.Buffer
 	h.mu.Lock()
 	enc := gob.NewEncoder(&b)
@@ -143,7 +128,7 @@ func (h *KvStore) GetSnapshot()  ([]byte, error) {
 	return b.Bytes(),nil
 }
 
-func (s *KvStore) recoverFromSnapshot(snapshot []byte) error {
+func (s *Storage) recoverFromSnapshot(snapshot []byte) error {
 	var db Database
 	buf := bytes.NewBuffer(snapshot)
 	dec := gob.NewDecoder(buf)
