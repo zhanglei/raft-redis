@@ -133,7 +133,13 @@ func (rc *raftNode) entriesToApply(ents []raftpb.Entry) (nents []raftpb.Entry) {
 func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 	for i := range ents {
 
-
+		if ents[i].Index == rc.appliedIndex + 1 {
+			select {
+			case rc.commitC <- nil:
+			case <-rc.stopc:
+				return false
+			}
+		}
 
 
 		switch ents[i].Type {
