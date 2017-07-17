@@ -38,7 +38,7 @@ func (s *Storage) Propose(m string, a [][]byte,conn string) {
 	if err := gob.NewEncoder(&buf).Encode(kv{m,a,conn}); err != nil {
 		log.Fatal(err)
 	}
-
+	println(buf.String())
 	s.proposeC <- string(buf.Bytes())
 }
 
