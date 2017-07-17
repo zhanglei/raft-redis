@@ -140,6 +140,8 @@ func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 				break
 			}
 			s := string(ents[i].Data)
+
+			println("publishEntries  ", s)
 			select {
 			case rc.commitC <- &s:
 			case <-rc.stopc:
@@ -176,6 +178,7 @@ func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 			}
 		}
 	}
+	println("publishEntries init ")
 	return true
 }
 
