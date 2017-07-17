@@ -132,16 +132,6 @@ func (rc *raftNode) entriesToApply(ents []raftpb.Entry) (nents []raftpb.Entry) {
 // whether all entries could be published.
 func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 	for i := range ents {
-
-		if ents[i].Index == rc.appliedIndex + 1 {
-			select {
-			case rc.commitC <- nil:
-			case <-rc.stopc:
-				return false
-			}
-		}
-
-
 		switch ents[i].Type {
 		case raftpb.EntryNormal:
 			if len(ents[i].Data) == 0 {
@@ -242,6 +232,9 @@ func (rc *raftNode) replayWAL() *wal.WAL {
 	rc.raftStorage.Append(ents)
 	// send nil once lastIndex is published so client knows commit channel is current
 	if len(ents) > 0 {
+		if snapshot != nil {
+			rc.commitC <- nil
+		}
 		rc.lastIndex = ents[len(ents)-1].Index
 	} else {
 		rc.commitC <- nil
