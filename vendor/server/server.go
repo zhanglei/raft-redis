@@ -161,17 +161,20 @@ func Main()  {
 	defer close(confChangeC)
 	_Storage = &Storage{proposeC: proposeC, Redis: NewDatabase()}
 	NewRaftNode(*id, strings.Split(*cluster, ","), strings.TrimRight(*dataDir,"/"),*join)
-	Run(proposeC)
-	server, err := NewServer(DefaultConfig(*kvport))
-	if err != nil {
-		panic(err)
-	}
+
 	go func() {
-		if err := server.ListenAndServe(); err != nil {
+		server, err := NewServer(DefaultConfig(*kvport))
+		if err != nil {
+			panic(err)
+		}
+		go func() {
+			if err := server.ListenAndServe(); err != nil {
+				panic(err)
+			}
+		}()
+		if err, ok := <-errorC; ok {
 			panic(err)
 		}
 	}()
-	if err, ok := <-errorC; ok {
-		panic(err)
-	}
+	Run()
 }

@@ -23,7 +23,7 @@ type kv struct {
 	Conn string
 }
 
-func Run(proposeC chan<- string) {
+func Run() {
 	_Storage.snapshotter = <-snapshotterReady
 	// replay log into key-value map
 	_Storage.readCommits(commitC, errorC)
