@@ -157,7 +157,6 @@ func Main()  {
 	join := flag.Bool("join", false, "join an existing cluster")
 	dataDir := flag.String("data-dir","data/","store databases")
 	flag.Parse()
-
 	defer close(proposeC)
 	defer close(confChangeC)
 	_Storage = &Storage{proposeC: proposeC, Redis: NewDatabase()}
@@ -172,8 +171,6 @@ func Main()  {
 			panic(err)
 		}
 	}()
-
-	// exit when raftd goes down
 	if err, ok := <-errorC; ok {
 		panic(err)
 	}
