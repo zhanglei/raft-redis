@@ -172,9 +172,9 @@ func Main()  {
 				panic(err)
 			}
 		}()
-		if err, ok := <-errorC; ok {
-			panic(err)
-		}
 	}()
 	Run()
+	if err, ok := <-errorC; ok {
+		panic(err)
+	}
 }
