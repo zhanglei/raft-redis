@@ -38,17 +38,14 @@ func (s *Storage) Propose(m string, a [][]byte,conn string) {
 	if err := gob.NewEncoder(&buf).Encode(kv{m,a,conn}); err != nil {
 		log.Fatal(err)
 	}
-	println(buf.String())
+	//println(buf.String())
 	s.proposeC <- string(buf.Bytes())
 }
 
 func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 	for data := range commitC {
-
-		println("ddddd==================")
 		if data == nil {
-
-			println("recive nil")
+			println(" readCommits recive nil")
 			// done replaying log; new data incoming
 			// OR signaled to load snapshot
 			snapshot, err := s.snapshotter.Load()
@@ -68,7 +65,7 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 			if *data == "" {
 				continue
 			}
-			println(*data)
+			//println(*data)
 		}
 
 		var dataKv kv

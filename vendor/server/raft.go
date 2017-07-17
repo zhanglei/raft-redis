@@ -131,7 +131,7 @@ func (rc *raftNode) entriesToApply(ents []raftpb.Entry) (nents []raftpb.Entry) {
 // publishEntries writes committed log entries to commit channel and returns
 // whether all entries could be published.
 func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
-	println("publishEntries init ")
+	//println("publishEntries init ")
 	for i := range ents {
 		switch ents[i].Type {
 		case raftpb.EntryNormal:
@@ -141,7 +141,7 @@ func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 			}
 			s := string(ents[i].Data)
 
-			println("publishEntries  ", s)
+			//println("publishEntries  ", s)
 			select {
 			case rc.commitC <- &s:
 			case <-rc.stopc:
@@ -178,7 +178,6 @@ func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 			}
 		}
 	}
-	println("publishEntries init ")
 	return true
 }
 
@@ -347,7 +346,8 @@ func (rc *raftNode) maybeTriggerSnapshot() {
 	if rc.appliedIndex-rc.snapshotIndex <= rc.snapCount {
 		return
 	}
-
+	//wait for last log apply
+	commitC <- new(string)
 	log.Printf("start snapshot [applied index: %d | last snapshot index: %d]", rc.appliedIndex, rc.snapshotIndex)
 	data, err := rc.db.GetSnapshot()
 	if err != nil {
