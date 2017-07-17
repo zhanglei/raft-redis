@@ -44,6 +44,8 @@ func (s *Storage) Propose(m string, a [][]byte,conn string) {
 
 func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 	for data := range commitC {
+
+		println(*data)
 		if data == nil {
 			// done replaying log; new data incoming
 			// OR signaled to load snapshot
