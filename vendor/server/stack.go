@@ -8,7 +8,6 @@ type Stack struct {
 	mu sync.Mutex
 	Key   string
 	Stack [][]byte
-	Chan  chan *Stack
 }
 
 func (s *Stack) PopBack() []byte {
@@ -34,11 +33,6 @@ func (s *Stack) PushBack(val []byte) {
 	if s.Stack == nil {
 		s.Stack = [][]byte{}
 	}
-	go func() {
-		if s.Chan != nil {
-			s.Chan <- s
-		}
-	}()
 	s.Stack = append(s.Stack, val)
 }
 
@@ -65,11 +59,6 @@ func (s *Stack) PushFront(val []byte) {
 		s.Stack = [][]byte{}
 	}
 	s.Stack = append([][]byte{val}, s.Stack...)
-	go func() {
-		if s.Chan != nil {
-			s.Chan <- s
-		}
-	}()
 }
 
 // GetIndex return the element at the requested index.
@@ -99,7 +88,6 @@ func (s *Stack) Len() int {
 func NewStack(key string) *Stack {
 	return &Stack{
 		Stack: [][]byte{},
-		Chan:  make(chan *Stack),
 		Key:   key,
 	}
 }
