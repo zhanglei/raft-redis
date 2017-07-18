@@ -221,6 +221,8 @@ func (h *Database) Lpush(r *Request, key string, value []byte, values ...[]byte)
 	if !ok {
 		return 0, errors.New("rpush op something errors")
 	}
+	close(Conns[k])
+	delete(Conns,k)
 	return ret.(int), nil
 }
 
@@ -238,6 +240,8 @@ func (h *Database) Lpop(r *Request, key string) ([]byte, error) {
 	if !ok {
 		return []byte{}, errors.New("lpop op something errors")
 	}
+	close(Conns[k])
+	delete(Conns,k)
 	return ret.([]byte), nil
 }
 
@@ -256,7 +260,8 @@ func (h *Database) Rpop(r *Request, key string) ([]byte, error) {
 	if !ok {
 		return []byte{}, errors.New("rpop op something errors")
 	}
-
+	close(Conns[k])
+	delete(Conns,k)
 	return ret.([]byte), nil
 }
 
@@ -273,6 +278,8 @@ func (h *Database) Sadd(r *Request, key string, values ...string) (int, error) {
 	if !ok {
 		return 0, errors.New("sadd op something errors")
 	}
+	close(Conns[k])
+	delete(Conns,k)
 	return num.(int), nil
 }
 
@@ -312,6 +319,8 @@ func (h *Database) Hset(r *Request, key, subkey string, value []byte) (int, erro
 	if !ok {
 		return 0, errors.New("del op something errors")
 	}
+	close(Conns[k])
+	delete(Conns,k)
 	return num.(int), nil
 }
 
@@ -347,6 +356,8 @@ func (h *Database) Del(r *Request, key string, keys ...string) (int, error) {
 	if !ok {
 		return 0, errors.New("del op something errors")
 	}
+	close(Conns[k])
+	delete(Conns,k)
 	return num.(int), nil
 }
 func (h *Database) Select(key string) error {

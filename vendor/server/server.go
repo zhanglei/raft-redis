@@ -64,7 +64,7 @@ func (srv *Server) Serve(l net.Listener) error {
 // It reads commands using the redis protocol, passes them to `handler`,
 // and returns the result.
 func (srv *Server) ServeClient(conn net.Conn) (err error) {
-	clientChan := make(chan struct{})
+	//clientChan := make(chan struct{})
 	var clientAddr string
 	switch co := conn.(type) {
 	case *net.UnixConn:
@@ -92,7 +92,7 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 		// Close chan in order to trigger eventual selects
 
 		defer func() {
-			 close(clientChan)
+		//	 close(clientChan)
 			 Debugf("Client disconnected")
 		}()
 
@@ -108,7 +108,7 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 			return err
 		}
 		request.Host = clientAddr
-		request.ClientChan = clientChan
+		//request.ClientChan = clientChan
 		request.Conn = c
 		reply, err := srv.Apply(request)
 		if err != nil {
