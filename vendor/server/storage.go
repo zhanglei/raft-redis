@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"log"
-	"sync"
 	"github.com/coreos/etcd/snap"
 )
 
@@ -12,7 +11,7 @@ var _Storage * Storage
 // a key-value store backed by raftd
 type Storage struct {
 	proposeC    chan<- string // channel for proposing updates
-	mu          sync.RWMutex
+	//mu          sync.RWMutex
 	Redis       *Database
 	snapshotter *snap.Snapshotter
 }
@@ -73,7 +72,7 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 			log.Fatalf("raftexample: could not decode message (%v)", err)
 		}
 		//log.Printf("do commit %s %s %s",dataKv.Method,dataKv.Args,dataKv.Conn)
-		s.mu.Lock()
+		s.Redis.Rwmu.Lock()
 
 		switch dataKv.Method {
 		case "set" :
@@ -125,19 +124,19 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 		default:
 			//do nothing*/
 		}
-		s.mu.Unlock()
+		s.Redis.Rwmu.Unlock()
 	}
 	if err, ok := <-errorC; ok {
 		log.Fatal(err)
 	}
 }
 
-func (h *Storage) GetSnapshot()  ([]byte, error) {
+func (s *Storage) GetSnapshot()  ([]byte, error) {
 	var b bytes.Buffer
-	h.mu.Lock()
+	s.Redis.Rwmu.Lock()
 	enc := gob.NewEncoder(&b)
-	enc.Encode(*h.Redis)
-	h.mu.Unlock()
+	enc.Encode(*s.Redis)
+	s.Redis.Rwmu.Unlock()
 	return b.Bytes(),nil
 }
 
@@ -148,8 +147,8 @@ func (s *Storage) recoverFromSnapshot(snapshot []byte) error {
 	if err := dec.Decode(&db); err != nil {
 		return err
 	}
-	s.mu.Lock()
+	//s.Redis.Rwmu.Lock()
 	s.Redis = &db
-	s.mu.Unlock()
+	//s.Redis.Rwmu.Unlock()
 	return nil
 }

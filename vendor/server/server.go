@@ -15,6 +15,7 @@ import (
 	"strings"
 	"github.com/coreos/etcd/snap"
 	"github.com/coreos/etcd/raft/raftpb"
+	"log"
 )
 
 var (
@@ -165,16 +166,16 @@ func Main()  {
 	go func() {
 		server, err := NewServer(DefaultConfig(*kvport))
 		if err != nil {
-			panic(err)
+			log.Fatalf("raft-redis: error loading wal (%v)", err)
 		}
 		go func() {
 			if err := server.ListenAndServe(); err != nil {
-				panic(err)
+				log.Fatalf("raft-redis: error loading wal (%v)", err)
 			}
 		}()
 	}()
 	Run()
 	if err, ok := <-errorC; ok {
-		panic(err)
+		log.Fatalf("raft-redis: error loading wal (%v)", err)
 	}
 }
