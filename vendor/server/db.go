@@ -164,14 +164,14 @@ func (h *Database) RemoveNode(id string) error {
 func (h *Database) Rpush(r *Request, key string, value []byte, values ...[]byte) (int, error) {
 	values = append([][]byte{value}, values...)
 	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
-	Conns[k] = make(chan interface{})
-	defer  delete(Conns,k)
+	Conns.Add(k,make(chan interface{}))
+	defer  Conns.Del(k)
 	_Storage.Propose("rpush", append([][]byte{[]byte(key)}, values...),k)
-	ret, ok := <-Conns[k]
+	ret, ok := <- Conns.Get(k)
 	if !ok {
 		return 0, errors.New("rpush op something errors")
 	}
-	close(Conns[k])
+	close(Conns.Get(k))
 	return ret.(int), nil
 }
 
@@ -217,14 +217,14 @@ func (h *Database) Lindex(key string, index int) ([]byte, error) {
 func (h *Database) Lpush(r *Request, key string, value []byte, values ...[]byte) (int, error) {
 	values = append([][]byte{value}, values...)
 	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
-	Conns[k] = make(chan interface{})
-	defer  delete(Conns,k)
+	Conns.Add(k,make(chan interface{}))
+	defer  Conns.Del(k)
 	_Storage.Propose("rpush", append([][]byte{[]byte(key)}, values...),k)
-	ret, ok := <-Conns[k]
+	ret, ok := <-Conns.Get(k)
 	if !ok {
 		return 0, errors.New("rpush op something errors")
 	}
-	close(Conns[k])
+	close(Conns.Get(k))
 	return ret.(int), nil
 }
 
@@ -236,14 +236,14 @@ func (h *Database) Lpop(r *Request, key string) ([]byte, error) {
 		return nil, nil
 	}
 	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
-	Conns[k] = make(chan interface{})
-	defer  delete(Conns,k)
+	Conns.Add(k,make(chan interface{}))
+	defer  Conns.Del(k)
 	_Storage.Propose("lpop", append([][]byte{[]byte(key)}), k)
-	ret, ok := <-Conns[k]
+	ret, ok := <-Conns.Get(k)
 	if !ok {
 		return []byte{}, errors.New("lpop op something errors")
 	}
-	close(Conns[k])
+	close(Conns.Get(k))
 	return ret.([]byte), nil
 }
 
@@ -255,15 +255,15 @@ func (h *Database) Rpop(r *Request, key string) ([]byte, error) {
 		return nil, nil
 	}
 	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
-	Conns[k] = make(chan interface{})
-	defer  delete(Conns,k)
+	Conns.Add(k,make(chan interface{}))
+	defer  Conns.Del(k)
 	_Storage.Propose("rpop", append([][]byte{[]byte(key)}),k)
 
-	ret, ok := <-Conns[k]
+	ret, ok := <-Conns.Get(k)
 	if !ok {
 		return []byte{}, errors.New("rpop op something errors")
 	}
-	close(Conns[k])
+	close(Conns.Get(k))
 	return ret.([]byte), nil
 }
 
@@ -274,14 +274,14 @@ func (h *Database) Sadd(r *Request, key string, values ...string) (int, error) {
 		bytes = append(bytes, []byte(value))
 	}
 	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
-	Conns[k] = make(chan interface{})
-	defer  delete(Conns,k)
+	Conns.Add(k,make(chan interface{}))
+	defer  Conns.Del(k)
 	_Storage.Propose("sadd", append([][]byte{[]byte(key)}, bytes...), k)
-	num, ok := <-Conns[k]
+	num, ok := <-Conns.Get(k)
 	if !ok {
 		return 0, errors.New("sadd op something errors")
 	}
-	close(Conns[k])
+	close(Conns.Get(k))
 	return num.(int), nil
 }
 
@@ -315,14 +315,14 @@ func (h *Database) Hget(key, subkey string) ([]byte, error) {
 func (h *Database) Hset(r *Request, key, subkey string, value []byte) (int, error) {
 
 	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
-	Conns[k] = make(chan interface{})
-	defer  delete(Conns,k)
+	Conns.Add(k,make(chan interface{}))
+	defer  Conns.Del(k)
 	_Storage.Propose("hset", append([][]byte{[]byte(key)}, []byte(subkey), value),k)
-	num, ok := <-Conns[k]
+	num, ok := <-Conns.Get(k)
 	if !ok {
 		return 0, errors.New("del op something errors")
 	}
-	close(Conns[k])
+	close(Conns.Get(k))
 	return num.(int), nil
 }
 
@@ -352,14 +352,14 @@ func (h *Database) Del(r *Request, key string, keys ...string) (int, error) {
 		bytes = append(bytes, []byte(k))
 	}
 	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
-	Conns[k] = make(chan interface{})
-	defer  delete(Conns,k)
+	Conns.Add(k,make(chan interface{}))
+	defer  Conns.Del(k)
 	_Storage.Propose("del", bytes, k)
-	num, ok := <-Conns[k]
+	num, ok := <-Conns.Get(k)
 	if !ok {
 		return 0, errors.New("del op something errors")
 	}
-	close(Conns[k])
+	close(Conns.Get(k))
 	return num.(int), nil
 }
 func (h *Database) Select(key string) error {

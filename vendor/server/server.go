@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	Conns = make( map[string]chan interface{})
+	Conns = NewConnMap()
 	proposeC = make(chan string)
 	confChangeC = make(chan raftpb.ConfChange)
 	commitC = make(chan *string)

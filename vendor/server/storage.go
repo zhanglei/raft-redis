@@ -80,38 +80,45 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 			s.Redis.methodSet(dataKv.Args)
 		case "del" :
 			num := s.Redis.methodDel(dataKv.Args)
-			if respchan,found :=Conns[dataKv.Conn];found {
+			if Conns.Exists(dataKv.Conn){
+				respchan := Conns.Get(dataKv.Conn)
 				respchan <- num
 			}
 		case "hset":
 			num := s.Redis.methodHset(dataKv.Args)
-			if respchan,found :=Conns[dataKv.Conn];found {
+			if Conns.Exists(dataKv.Conn){
+				respchan := Conns.Get(dataKv.Conn)
 				respchan <- num
 			}
 
 		case "rpush":
 			num := s.Redis.methodRpush(dataKv.Args)
-			if respchan,found :=Conns[dataKv.Conn];found {
+			if Conns.Exists(dataKv.Conn){
+				respchan := Conns.Get(dataKv.Conn)
 				respchan <- num
 			}
 		case "lpush":
 			num := s.Redis.methodLpush(dataKv.Args)
-			if respchan,found :=Conns[dataKv.Conn];found {
+			if Conns.Exists(dataKv.Conn){
+				respchan := Conns.Get(dataKv.Conn)
 				respchan <- num
 			}
 		case "lpop":
 			byteArr := s.Redis.methodLpop(dataKv.Args)
-			if respchan,found :=Conns[dataKv.Conn];found {
+			if Conns.Exists(dataKv.Conn){
+				respchan := Conns.Get(dataKv.Conn)
 				respchan <- byteArr
 			}
 		case "rpop":
 			byteArr := s.Redis.methodRpop(dataKv.Args)
-			if respchan,found :=Conns[dataKv.Conn];found {
+			if Conns.Exists(dataKv.Conn){
+				respchan := Conns.Get(dataKv.Conn)
 				respchan <- byteArr
 			}
 		case "sadd":
 			num := s.Redis.methodSadd(dataKv.Args)
-			if respchan,found :=Conns[dataKv.Conn];found {
+			if Conns.Exists(dataKv.Conn){
+				respchan := Conns.Get(dataKv.Conn)
 				respchan <- num
 			}
 
