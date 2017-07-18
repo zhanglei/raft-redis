@@ -15,4 +15,4 @@ hack/tls-setup/certs
 .idea
 data
 raft-redis
-log.log
+log.log 8183.31 requests per second
