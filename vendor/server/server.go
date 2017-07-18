@@ -76,15 +76,15 @@ func (srv *Server) ServeClient(conn net.Conn) (err error) {
 	default:
 		clientAddr = co.RemoteAddr().String()
 	}
-	c := fmt.Sprintf("%s%d",clientAddr,time.Now().UnixNano())
+	c := fmt.Sprintf("%s",clientAddr)
 
-	Conns[c] = make(chan interface{})
+	//Conns[c] = make(chan interface{})
 	defer func() {
 		if err != nil {
 			fmt.Fprintf(conn, "-%s\n", err)
 		}
-		close(Conns[c])
-		delete(Conns,c)
+	//	close(Conns[c])
+	//	delete(Conns,c)
 		conn.Close()
 	}()
 	// Read on `conn` in order to detect client disconnect

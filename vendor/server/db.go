@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"github.com/coreos/etcd/raft/raftpb"
 	//"sync"
+	"time"
+	"fmt"
 )
 
 type (
@@ -161,9 +163,10 @@ func (h *Database) RemoveNode(id string) error {
 //list operation
 func (h *Database) Rpush(r *Request, key string, value []byte, values ...[]byte) (int, error) {
 	values = append([][]byte{value}, values...)
-
-	_Storage.Propose("rpush", append([][]byte{[]byte(key)}, values...), r.Conn)
-	ret, ok := <-Conns[r.Conn]
+	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
+	Conns[k] = make(chan interface{})
+	_Storage.Propose("rpush", append([][]byte{[]byte(key)}, values...),k)
+	ret, ok := <-Conns[k]
 	if !ok {
 		return 0, errors.New("rpush op something errors")
 	}
@@ -211,8 +214,10 @@ func (h *Database) Lindex(key string, index int) ([]byte, error) {
 
 func (h *Database) Lpush(r *Request, key string, value []byte, values ...[]byte) (int, error) {
 	values = append([][]byte{value}, values...)
-	_Storage.Propose("rpush", append([][]byte{[]byte(key)}, values...), r.Conn)
-	ret, ok := <-Conns[r.Conn]
+	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
+	Conns[k] = make(chan interface{})
+	_Storage.Propose("rpush", append([][]byte{[]byte(key)}, values...),k)
+	ret, ok := <-Conns[k]
 	if !ok {
 		return 0, errors.New("rpush op something errors")
 	}
@@ -226,8 +231,10 @@ func (h *Database) Lpop(r *Request, key string) ([]byte, error) {
 	if _, found := h.Brstack[key]; !found {
 		return nil, nil
 	}
-	_Storage.Propose("lpop", append([][]byte{[]byte(key)}), r.Conn)
-	ret, ok := <-Conns[r.Conn]
+	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
+	Conns[k] = make(chan interface{})
+	_Storage.Propose("lpop", append([][]byte{[]byte(key)}), k)
+	ret, ok := <-Conns[k]
 	if !ok {
 		return []byte{}, errors.New("lpop op something errors")
 	}
@@ -241,9 +248,11 @@ func (h *Database) Rpop(r *Request, key string) ([]byte, error) {
 	if _, found := h.Brstack[key]; !found {
 		return nil, nil
 	}
-	_Storage.Propose("rpop", append([][]byte{[]byte(key)}), r.Conn)
+	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
+	Conns[k] = make(chan interface{})
+	_Storage.Propose("rpop", append([][]byte{[]byte(key)}),k)
 
-	ret, ok := <-Conns[r.Conn]
+	ret, ok := <-Conns[k]
 	if !ok {
 		return []byte{}, errors.New("rpop op something errors")
 	}
@@ -257,8 +266,10 @@ func (h *Database) Sadd(r *Request, key string, values ...string) (int, error) {
 	for _, value := range values {
 		bytes = append(bytes, []byte(value))
 	}
-	_Storage.Propose("sadd", append([][]byte{[]byte(key)}, bytes...), r.Conn)
-	num, ok := <-Conns[r.Conn]
+	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
+	Conns[k] = make(chan interface{})
+	_Storage.Propose("sadd", append([][]byte{[]byte(key)}, bytes...), k)
+	num, ok := <-Conns[k]
 	if !ok {
 		return 0, errors.New("sadd op something errors")
 	}
@@ -293,8 +304,11 @@ func (h *Database) Hget(key, subkey string) ([]byte, error) {
 }
 
 func (h *Database) Hset(r *Request, key, subkey string, value []byte) (int, error) {
-	_Storage.Propose("hset", append([][]byte{[]byte(key)}, []byte(subkey), value), r.Conn)
-	num, ok := <-Conns[r.Conn]
+
+	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
+	Conns[k] = make(chan interface{})
+	_Storage.Propose("hset", append([][]byte{[]byte(key)}, []byte(subkey), value),k)
+	num, ok := <-Conns[k]
 	if !ok {
 		return 0, errors.New("del op something errors")
 	}
@@ -326,8 +340,10 @@ func (h *Database) Del(r *Request, key string, keys ...string) (int, error) {
 	for _, k := range keys {
 		bytes = append(bytes, []byte(k))
 	}
-	_Storage.Propose("del", bytes, r.Conn)
-	num, ok := <-Conns[r.Conn]
+	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
+	Conns[k] = make(chan interface{})
+	_Storage.Propose("del", bytes, k)
+	num, ok := <-Conns[k]
 	if !ok {
 		return 0, errors.New("del op something errors")
 	}
