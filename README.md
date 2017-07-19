@@ -1,6 +1,6 @@
 # raft-redis
 
-[中文简介](https://github.com/raft-redis/doc)
+[中文简介](https://github.com/widaT/raft-redis/tree/master/doc)
 
 simple redis server base etcd raft lib
 
@@ -69,7 +69,7 @@ Node 3 should shut itself down once the cluster has processed this request.
 
 # benchmark
 
-![benchmark](https://github.com/raft-redis/doc/benchmark.png)
+![benchmark](https://github.com/widaT/raft-redis/tree/master/doc/benchmark.png)
 
 # Thanks
 
