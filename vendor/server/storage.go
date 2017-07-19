@@ -5,13 +5,15 @@ import (
 	"encoding/gob"
 	"log"
 	"github.com/coreos/etcd/snap"
+	"sync"
 )
 
 var _Storage * Storage
+var _DBRwmu sync.RWMutex
+
 // a key-value store backed by raftd
 type Storage struct {
 	proposeC    chan<- string // channel for proposing updates
-	//mu          sync.RWMutex
 	Redis       *Database
 	snapshotter *snap.Snapshotter
 }
@@ -45,8 +47,6 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 	for data := range commitC {
 		if data == nil {
 			//println(" readCommits recive nil")
-			// done replaying log; new data incoming
-			// OR signaled to load snapshot
 			snapshot, err := s.snapshotter.Load()
 			if err == snap.ErrNoSnapshot {
 				return
@@ -63,7 +63,6 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 			if *data == "" {
 				continue
 			}
-			//println(*data)
 		}
 
 		var dataKv kv
@@ -72,7 +71,7 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 			log.Fatalf("raftexample: could not decode message (%v)", err)
 		}
 		//log.Printf("do commit %s %s %s",dataKv.Method,dataKv.Args,dataKv.Conn)
-		s.Redis.Rwmu.Lock()
+		_DBRwmu.Lock()
 
 		switch dataKv.Method {
 		case "set" :
@@ -124,7 +123,7 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 		default:
 			//do nothing*/
 		}
-		s.Redis.Rwmu.Unlock()
+		_DBRwmu.Unlock()
 	}
 	if err, ok := <-errorC; ok {
 		log.Fatal(err)
@@ -133,22 +132,22 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 
 func (s *Storage) GetSnapshot()  ([]byte, error) {
 	var b bytes.Buffer
-	s.Redis.Rwmu.Lock()
+	_DBRwmu.Lock()
 	enc := gob.NewEncoder(&b)
 	enc.Encode(*s.Redis)
-	s.Redis.Rwmu.Unlock()
+	_DBRwmu.Unlock()
 	return b.Bytes(),nil
 }
 
 func (s *Storage) recoverFromSnapshot(snapshot []byte) error {
 	var db Database
+	_DBRwmu.Lock()
 	buf := bytes.NewBuffer(snapshot)
 	dec := gob.NewDecoder(buf)
 	if err := dec.Decode(&db); err != nil {
 		return err
 	}
-	//s.Redis.Rwmu.Lock()
 	s.Redis = &db
-	//s.Redis.Rwmu.Unlock()
+	_DBRwmu.Unlock()
 	return nil
 }

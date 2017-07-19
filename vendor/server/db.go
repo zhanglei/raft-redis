@@ -4,10 +4,8 @@ import (
 	"errors"
 	"strconv"
 	"github.com/coreos/etcd/raft/raftpb"
-	//"sync"
 	"time"
 	"fmt"
-	"sync"
 )
 
 type (
@@ -27,7 +25,6 @@ type Database struct {
 	Hvalues HashHash
 	Brstack HashBrStack
 	Hvset   HashSet
-	Rwmu    sync.RWMutex
 }
 
 func NewDatabase() *Database {
@@ -292,8 +289,8 @@ func (h *Database) Scard(key string) (int, error) {
 	if _, exists := h.Hvset[key]; !exists {
 		return 0, nil
 	}
-	h.Rwmu.RLock()
-	defer h.Rwmu.RUnlock()
+	_DBRwmu.RLock()
+	defer _DBRwmu.RUnlock()
 	return h.Hvset[key].Len(), nil
 }
 
@@ -301,8 +298,8 @@ func (h *Database) Smembers(key string) ([][]byte, error) {
 	if _, exists := h.Hvset[key]; !exists {
 		return nil, nil
 	}
-	h.Rwmu.RLock()
-	defer h.Rwmu.RUnlock()
+	_DBRwmu.RLock()
+	defer _DBRwmu.RUnlock()
 	return *h.Hvset[key].Members(), nil
 }
 
@@ -311,8 +308,8 @@ func (h *Database) Hget(key, subkey string) ([]byte, error) {
 	if h.Hvalues == nil {
 		return nil, nil
 	}
-	h.Rwmu.RLock()
-	defer h.Rwmu.RUnlock()
+	_DBRwmu.RLock()
+	defer _DBRwmu.RUnlock()
 	if v, exists := h.Hvalues[key]; exists {
 		if v, exists := v[subkey]; exists {
 			return v, nil
@@ -339,14 +336,14 @@ func (h *Database) Hgetall(key string) (HashValue, error) {
 	if h.Hvalues == nil {
 		return nil, nil
 	}
-	h.Rwmu.RLock()
-	defer h.Rwmu.RUnlock()
+	_DBRwmu.RLock()
+	defer _DBRwmu.RUnlock()
 	return h.Hvalues[key], nil
 }
 
 func (h *Database) Get(key string) ([]byte, error) {
-	h.Rwmu.RLock()
-	defer h.Rwmu.RUnlock()
+	_DBRwmu.RLock()
+	defer _DBRwmu.RUnlock()
 	if h.Values == nil {
 		return nil, nil
 	}

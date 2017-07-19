@@ -8,8 +8,6 @@ type Config struct {
 	Host    string
 	Port    int
 	Handler interface{}
-	SnapDir string
-	WalDir  string
 	ConfChangeC chan<- raftpb.ConfChange
 }
 
