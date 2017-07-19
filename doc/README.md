@@ -60,7 +60,7 @@ redis-cli -p 6389 removenode 4 http://127.0.0.1:42379
 
 # benchmark
 
-![benchmark](https://github.com/raft-redis/doc/benchmark.jpg)
+![benchmark](https://github.com/raft-redis/doc/benchmark.png)
 
 # 感谢
 

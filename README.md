@@ -69,7 +69,7 @@ Node 3 should shut itself down once the cluster has processed this request.
 
 # benchmark
 
-![benchmark](https://github.com/raft-redis/doc/benchmark.jpg)
+![benchmark](https://github.com/raft-redis/doc/benchmark.png)
 
 # Thanks
 
