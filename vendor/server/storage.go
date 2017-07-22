@@ -134,7 +134,13 @@ func (s *Storage) GetSnapshot()  ([]byte, error) {
 	var b bytes.Buffer
 	_DBRwmu.Lock()
 	enc := gob.NewEncoder(&b)
+	List  := &(*s.Redis).dlList
+	s.Redis.HList = make(HashList)
+	for key,v:= range *List {
+		s.Redis.HList[key] = v.Values()
+	}
 	enc.Encode(*s.Redis)
+	s.Redis.HList = nil
 	_DBRwmu.Unlock()
 	return b.Bytes(),nil
 }
@@ -147,6 +153,14 @@ func (s *Storage) recoverFromSnapshot(snapshot []byte) error {
 	if err := dec.Decode(&db); err != nil {
 		return err
 	}
+	db.dlList = make(HashBrStack)
+	for key,v := range db.HList {
+		if _,found := s.Redis.dlList[key];!found {
+			db.dlList[key] = NewList()
+		}
+		db.dlList[key].Add(v...)
+	}
+	db.HList = nil
 	s.Redis = &db
 	_DBRwmu.Unlock()
 	return nil

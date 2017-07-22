@@ -11,8 +11,9 @@ import (
 type (
 	HashValue map[string][]byte
 	HashHash map[string]HashValue
-	HashBrStack map[string]*Stack
+	HashBrStack map[string]*List
 	HashSet map[string]*Set
+	HashList map[string][][]byte // for HashBrStack snapshot
 )
 
 type Op struct {
@@ -23,16 +24,18 @@ type Op struct {
 type Database struct {
 	Values  HashValue
 	Hvalues HashHash
-	Brstack HashBrStack
+	dlList HashBrStack
 	Hvset   HashSet
+	HList   HashList
 }
 
 func NewDatabase() *Database {
 	db := &Database{
 		Values:  make(HashValue),
-		Brstack: make(HashBrStack),
+		dlList: make(HashBrStack),
 		Hvset:   make(HashSet),
 		Hvalues: make(HashHash),
+		HList:make(HashList),
 	}
 	return db
 }
@@ -81,38 +84,37 @@ func (d *Database) methodHset(b [][]byte) int {
 func (d *Database) methodRpush(b [][]byte) int {
 	key := string(b[0])
 	values := b[1:]
-	if _, exists := d.Brstack[key]; !exists {
-		d.Brstack[key] = NewStack(key)
+	if _, exists := d.dlList[key]; !exists {
+		d.dlList[key] = NewList()
 	}
-	for _, value := range values {
-		d.Brstack[key].PushBack(value)
-	}
-	return d.Brstack[key].Len()
+	/*for _, value := range values {
+		d.dlList[key].PushBack(value)
+	}*/
+
+	return d.dlList[key].Rpush(values...)
 }
 
 //func (d *Database)methodLpush(key string, value []byte, values ...[]byte) int {
 func (d *Database) methodLpush(b [][]byte) int {
 	key := string(b[0])
 	values := b[1:]
-	if _, exists := d.Brstack[key]; !exists {
-		d.Brstack[key] = NewStack(key)
+	if _, exists := d.dlList[key]; !exists {
+		d.dlList[key] = NewList()
 	}
-	for _, value := range values {
-		d.Brstack[key].PushFront(value)
-	}
-	return d.Brstack[key].Len()
+
+	return d.dlList[key].Lpush(values...)
 }
 
 //func (d *Database)methodLpop(key string) []byte {
 func (d *Database) methodLpop(b [][]byte) []byte {
 	key := string(b[0])
-	return d.Brstack[key].PopFront()
+	return d.dlList[key].Lpop()
 }
 
 //func (d *Database)methodRpop(key string) []byte {
 func (d *Database) methodRpop(b [][]byte) []byte {
 	key := string(b[0])
-	return d.Brstack[key].PopBack()
+	return d.dlList[key].Lpop()
 }
 
 //func (d *Database)methodSadd(key string, values ...string) int {
@@ -174,24 +176,24 @@ func (h *Database) Rpush(r *Request, key string, value []byte, values ...[]byte)
 }
 
 func (h *Database) Lrange(key string, start, stop int) ([][]byte, error) {
-	if _, exists := h.Brstack[key]; !exists {
-		h.Brstack[key] = NewStack(key)
+	if _, exists := h.dlList[key]; !exists {
+		h.dlList[key] = NewList()
 	}
 
 	if start < 0 {
-		if start = h.Brstack[key].Len() + start; start < 0 {
+		if start = h.dlList[key].size + start; start < 0 {
 			start = 0
 		}
 	}
 	var ret [][]byte
 	if stop < 0 {
-		stop = h.Brstack[key].Len() + stop
+		stop = h.dlList[key].size + stop
 		if stop < 0 {
 			return nil, nil
 		}
 	}
 	for i := start; i <= stop; i++ {
-		if val := h.Brstack[key].GetIndex(i); val != nil {
+		if val ,_:= h.dlList[key].Get(i); val != nil {
 			ret = append(ret, val)
 		}
 	}
@@ -199,38 +201,41 @@ func (h *Database) Lrange(key string, start, stop int) ([][]byte, error) {
 }
 
 func (h *Database) Llen(key string) (int, error) {
-	if _, exists := h.Brstack[key]; !exists {
+	if _, exists := h.dlList[key]; !exists {
 		return 0, nil
 	}
-	return h.Brstack[key].Len(), nil
+	return h.dlList[key].size, nil
 }
 
 func (h *Database) Lindex(key string, index int) ([]byte, error) {
-	if _, exists := h.Brstack[key]; !exists {
-		h.Brstack[key] = NewStack(key)
+	if _, exists := h.dlList[key]; !exists {
+		h.dlList[key] = NewList()
 	}
-	return h.Brstack[key].GetIndex(index), nil
+	ret,_:= h.dlList[key].Get(index)
+	return ret, nil
 }
 
 func (h *Database) Lpush(r *Request, key string, value []byte, values ...[]byte) (int, error) {
 	values = append([][]byte{value}, values...)
 	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
-	Conns.Add(k,make(chan interface{}))
+
+	retch := make(chan interface{})
+	Conns.Add(k,retch)
 	defer  Conns.Del(k)
 	_Storage.Propose("rpush", append([][]byte{[]byte(key)}, values...),k)
 	ret, ok := <-Conns.Get(k)
 	if !ok {
 		return 0, errors.New("rpush op something errors")
 	}
-	close(Conns.Get(k))
+	close(retch)
 	return ret.(int), nil
 }
 
 func (h *Database) Lpop(r *Request, key string) ([]byte, error) {
-	if h.Brstack == nil {
+	if h.dlList == nil {
 		return nil, nil
 	}
-	if _, found := h.Brstack[key]; !found {
+	if _, found := h.dlList[key]; !found {
 		return nil, nil
 	}
 	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
@@ -246,10 +251,10 @@ func (h *Database) Lpop(r *Request, key string) ([]byte, error) {
 }
 
 func (h *Database) Rpop(r *Request, key string) ([]byte, error) {
-	if h.Brstack == nil {
+	if h.dlList == nil {
 		return nil, nil
 	}
-	if _, found := h.Brstack[key]; !found {
+	if _, found := h.dlList[key]; !found {
 		return nil, nil
 	}
 	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
