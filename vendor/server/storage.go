@@ -40,7 +40,7 @@ func (s *Storage) Propose(m string, a [][]byte,conn string) {
 		log.Fatal(err)
 	}
 	//println(buf.String())
-	s.proposeC <- string(buf.Bytes())
+	s.proposeC <- buf.String()
 }
 
 func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
