@@ -16,6 +16,71 @@ type element struct {
 	prev  *element
 	next  *element
 }
+func (e *element ) hasNext() bool  {
+	return e.next != nil
+}
+
+type Iterator interface {
+	// Next returns true if the iterator contains subsequent elements
+	// and advances its state to the next element if that is possible.
+	Next() (ok bool)
+	// Value returns the current value.
+	Value() []byte
+	Key()  int
+	// Close this iterator to reap resources associated with it.  While not
+	// strictly required, it will provide extra hints for the garbage collector.
+	Close()
+}
+
+
+type iter struct {
+	current *element
+	list    * List
+	index   int
+	value   []byte
+}
+
+
+func (i iter) Key() int {
+	return i.index
+}
+
+func (i iter) Value() []byte{
+	return i.value
+}
+
+func (i *iter) Next() bool {
+	if !i.current.hasNext() {
+		return false
+	}
+	i.current = i.current.next
+	i.value = i.current.value
+	i.index ++
+	return true
+}
+
+func (i *iter) Close() {
+	i.index=0
+	i.value = nil
+	i.current = nil
+	i.list = nil
+}
+// Seek returns a bidirectional iterator starting with the first element whose
+// key is greater or equal to key; otherwise, a nil iterator is returned.
+func (list *List) Seek(index int) Iterator {
+	current := list.GetIndex(index)
+	if current == nil {
+		return nil
+	}
+
+	return &iter{
+		index:index,
+		current: current,
+		list:    list,
+		value:   current.value,
+	}
+}
+
 
 // New instantiates a new empty list
 func NewList() *List {
@@ -111,7 +176,22 @@ func (list *List) Get(index int) ([]byte, bool) {
 	}
 	return element.value, true
 }
-
+func (list*List)GetIndex(index int) *element  {
+	if !list.withinRange(index) {
+		return nil
+	}
+	// determine traveral direction, last to first or first to last
+	if list.size-index < index {
+		element := list.last
+		for e := list.size - 1; e != index; e, element = e-1, element.prev {
+		}
+		return element
+	}
+	element := list.first
+	for e := 0; e != index; e, element = e+1, element.next {
+	}
+	return element
+}
 // Remove removes one or more elements from the list with the supplied indices.
 func (list *List) Remove(index int) {
 

@@ -120,6 +120,37 @@ func MultiBulkFromMap(m map[string]interface{}) *MultiBulkReply {
 	return &MultiBulkReply{values: values}
 }
 
+
+func writeBytesBuffer(value interface{}) ([]byte) {
+	var buff []byte
+	if value == nil {
+		buff = []byte("$-1\r\n")
+		return buff
+	}
+	switch v := value.(type) {
+	case string:
+		if len(v) == 0 {
+			buff = []byte("$-1\r\n")
+			return buff
+		}
+		buff  = []byte("$" + strconv.Itoa(len(v)) + "\r\n")
+		buff = append(buff,[]byte(v+"\r\n")...)
+
+	case []byte:
+		if len(v) == 0 {
+			buff = []byte("$-1\r\n")
+			return buff
+		}
+		buff = []byte("$" + strconv.Itoa(len(v)) + "\r\n")
+		buff = append(buff,v...)
+		buff =append(buff, []byte("\r\n")...)
+
+	case int:
+		buff = []byte(":" + strconv.Itoa(v) + "\r\n")
+	}
+	return buff
+}
+
 func writeMultiBytes(values []interface{}, w io.Writer) (int64, error) {
 	if values == nil {
 		return 0, errors.New("Nil in multi bulk replies are not ok")
@@ -129,14 +160,13 @@ func writeMultiBytes(values []interface{}, w io.Writer) (int64, error) {
 		return int64(wrote), err
 	}
 	wrote64 := int64(wrote)
+
+	var buff []byte
 	for _, v := range values {
-		wroteBytes, err := writeBytes(v, w)
-		if err != nil {
-			return wrote64 + wroteBytes, err
-		}
-		wrote64 += wroteBytes
+		buff = append(buff, writeBytesBuffer(v)...)
 	}
-	return wrote64, err
+	w.Write(buff)
+	return wrote64+int64(len(buff)), err
 }
 
 func (r *MultiBulkReply) WriteTo(w io.Writer) (int64, error) {

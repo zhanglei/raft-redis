@@ -177,9 +177,8 @@ func (h *Database) Rpush(r *Request, key string, value []byte, values ...[]byte)
 
 func (h *Database) Lrange(key string, start, stop int) ([][]byte, error) {
 	if _, exists := h.dlList[key]; !exists {
-		h.dlList[key] = NewList()
+		return nil,nil
 	}
-
 	if start < 0 {
 		if start = h.dlList[key].size + start; start < 0 {
 			start = 0
@@ -187,16 +186,23 @@ func (h *Database) Lrange(key string, start, stop int) ([][]byte, error) {
 	}
 	var ret [][]byte
 	if stop < 0 {
-		stop = h.dlList[key].size + stop
-		if stop < 0 {
-			return nil, nil
+		stop =  h.dlList[key].size + stop
+		if stop <0 {
+			return nil,nil
 		}
 	}
-	for i := start; i <= stop; i++ {
-		if val ,_:= h.dlList[key].Get(i); val != nil {
-			ret = append(ret, val)
+	var iter = h.dlList[key].Seek(start)
+	if iter != nil {
+		ret = append(ret, iter.Value())
+	}
+	for iter.Next(){
+		if iter.Key() <= stop {
+			ret = append(ret, iter.Value())
+		}else {
+			break
 		}
 	}
+	iter.Close()
 	return ret, nil
 }
 
