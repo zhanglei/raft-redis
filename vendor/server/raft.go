@@ -71,7 +71,7 @@ type raftNode struct {
 	db *Storage
 }
 
-var defaultSnapCount uint64 = 10000
+var defaultSnapCount uint64 = 100000
 
 // newRaftNode initiates a raftd instance and returns a committed log entry
 // channel and error channel. Proposals for log updates are sent over the
@@ -340,7 +340,7 @@ func (rc *raftNode) publishSnapshot(snapshotToSave raftpb.Snapshot) {
 	rc.appliedIndex = snapshotToSave.Metadata.Index
 }
 
-var snapshotCatchUpEntriesN uint64 = 10000
+var snapshotCatchUpEntriesN uint64 = 100000
 
 func (rc *raftNode) maybeTriggerSnapshot() {
 	if rc.appliedIndex-rc.snapshotIndex <= rc.snapCount {
