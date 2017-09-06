@@ -120,6 +120,20 @@ func (s *Storage) readCommits(commitC <-chan *string, errorC <-chan error) {
 				respchan <- num
 			}
 
+		case "mset":
+			s.Redis.methodMset(dataKv.Args)
+		case "spop":
+			s.Redis.methodSpop(dataKv.Args)
+		case "incr":
+			num,err := s.Redis.methodIncr(dataKv.Args)
+			if Conns.Exists(dataKv.Conn){
+				respchan := Conns.Get(dataKv.Conn)
+				if err != nil {
+					respchan <- err
+				}else {
+					respchan <- num
+				}
+			}
 		default:
 			//do nothing*/
 		}

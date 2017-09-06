@@ -424,19 +424,21 @@ func (rc *raftNode) serveChannels() {
 		// store raftd entries to wal, then publish over commit channel
 		case rd := <-rc.node.Ready():
 
-			rc.wal.Save(rd.HardState, rd.Entries)
+			//暂时不写wal
+
+/*			rc.wal.Save(rd.HardState, rd.Entries)
 			if !raft.IsEmptySnap(rd.Snapshot) {
 				rc.saveSnap(rd.Snapshot)
 				rc.raftStorage.ApplySnapshot(rd.Snapshot)
 				rc.publishSnapshot(rd.Snapshot)
-			}
+			}*/
 			rc.raftStorage.Append(rd.Entries)
 			rc.transport.Send(rd.Messages)
 			if ok := rc.publishEntries(rc.entriesToApply(rd.CommittedEntries)); !ok {
 				rc.stop()
 				return
 			}
-			rc.maybeTriggerSnapshot()
+			//rc.maybeTriggerSnapshot()
 			rc.node.Advance()
 
 		case err := <-rc.transport.ErrorC:

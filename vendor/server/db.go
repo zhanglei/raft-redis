@@ -80,6 +80,22 @@ func (d *Database) methodHset(b [][]byte) int {
 	return ret
 }
 
+
+func (d *Database) methodIncr(b [][]byte) (int,error) {
+	key := string(b[0])
+	v,found := d.Values[key]
+	num  := 0
+	var err error
+	if found {
+		num ,err = strconv.Atoi(string(v))
+		if err != nil {
+			return 0,errors.New("value is not an integer or out of range")
+		}
+	}
+	d.Values[key] = []byte(fmt.Sprintf("%d",num+1))
+	return num +1,nil
+}
+
 //func (d *Database)methodRpush(key string, value []byte, values ...[]byte) int {
 func (d *Database) methodRpush(b [][]byte) int {
 	key := string(b[0])
@@ -132,6 +148,29 @@ func (d *Database) methodSadd(b [][]byte) int {
 	}
 	return count
 }
+
+
+func (d *Database) methodSpop(b [][]byte) {
+	key := string(b[0])
+	value := b[1]
+	if _, exists := d.Hvset[key]; !exists {
+		d.Hvset[key] = NewSet(key)
+	}
+	d.Hvset[key].Del(string(value))
+}
+
+func (d *Database) methodMset(b [][]byte) {
+	kvmap := make(map[string][]byte)
+	for i,v:= range b {
+		if i % 2 == 0 {
+			kvmap[string(v)] = []byte(b[i+1])
+		}
+	}
+	for k,v:= range kvmap {
+		d.Values[k] = v
+	}
+}
+
 
 func (h *Database) AddNode(id string, url []byte) error {
 	nodeId, err := strconv.ParseUint(id, 10, 0)
@@ -220,6 +259,28 @@ func (h *Database) Lindex(key string, index int) ([]byte, error) {
 	ret,_:= h.dlList[key].Get(index)
 	return ret, nil
 }
+
+
+func (h *Database) Incr (r *Request,key string) (int, error) {
+	k := fmt.Sprintf("%s%d",r.Conn,time.Now().UnixNano())
+	Conns.Add(k,make(chan interface{}))
+	defer  Conns.Del(k)
+	_Storage.Propose("incr", [][]byte{[]byte(key)},k)
+	ret, ok := <- Conns.Get(k)
+	if !ok {
+		return 0, errors.New("incr op something errors")
+	}
+	close(Conns.Get(k))
+	switch ret.(type) {
+	case error:
+		return 0,ret.(error)
+	case int:
+		return ret.(int),nil
+	}
+	return 0 ,nil
+}
+
+
 
 func (h *Database) Lpush(r *Request, key string, value []byte, values ...[]byte) (int, error) {
 	values = append([][]byte{value}, values...)
@@ -343,6 +404,20 @@ func (h *Database) Hset(r *Request, key, subkey string, value []byte) (int, erro
 	return num.(int), nil
 }
 
+func (h *Database)Spop(key string)( []byte,error)  {
+	if _, exists := h.Hvset[key]; !exists {
+		return nil,nil
+	}
+
+	if h.Hvset[key].Len() == 0 {
+		return nil,nil
+	}
+	v := h.Hvset[key].RandomKey()
+	_Storage.Propose("spop", append([][]byte{[]byte(key)}, []byte(v)),"")
+	return []byte(v),nil
+}
+
+
 func (h *Database) Hgetall(key string) (HashValue, error) {
 	if h.Hvalues == nil {
 		return nil, nil
@@ -363,6 +438,21 @@ func (h *Database) Get(key string) ([]byte, error) {
 
 func (h *Database) Set(key string, value []byte) error {
 	_Storage.Propose("set", append([][]byte{[]byte(key)}, value), "")
+	return nil
+}
+
+
+
+
+func (h *Database) Mset(values ...string) error {
+	if len(values) % 2 != 0 {
+		return errors.New("wrong number of arguments for MSET")
+	}
+	var bytes [][]byte
+	for _,v:= range values {
+		bytes = append(bytes,[]byte(v))
+	}
+	_Storage.Propose("mset", bytes, "")
 	return nil
 }
 

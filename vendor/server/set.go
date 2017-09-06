@@ -2,6 +2,8 @@ package server
 
 import (
 	"sync"
+	"math/rand"
+	"time"
 )
 
 type Set struct {
@@ -52,6 +54,24 @@ func (s *Set) Exists(key string) int {
 		return 1
 	}
 	return 0
+}
+
+func (s *Set) RandomKey()  string  {
+	var keys []string
+	for k,_ :=range s.Set {
+		keys = append(keys,k)
+	}
+	len := len(keys)
+	if len == 0 {
+		return ""
+	}
+
+	if len == 1 {
+		return keys[0]
+	}
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	index :=  r.Intn(len-1)
+	return keys[index]
 }
 
 func NewSet(key string) *Set {
